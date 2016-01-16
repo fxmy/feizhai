@@ -1,4 +1,4 @@
 deps
 **/ebin/**
-**/Mnesia/**
+Mnesia*
 .applist
