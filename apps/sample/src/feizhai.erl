@@ -1,7 +1,7 @@
 -module(feizhai).
 -compile([export_all]).
 
--include_lib("apps/sample/include/feizhai.hrl").
+-include_lib("sample/include/feizhai.hrl").
 -include_lib("kvs/include/metainfo.hrl").
 
 metainfo() ->
