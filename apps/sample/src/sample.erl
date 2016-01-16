@@ -10,7 +10,6 @@ stop(_)    -> ok.
 init([])   -> case cowboy:start_http(http,3,port(),env()) of
                    {ok, _}   -> ok;
                    {error,_} -> halt(abort,[]) end,
-	      1=2,
 	      kvs:join(),
 	      io:format("~nJOIN~n"),
 	      sup().
