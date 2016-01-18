@@ -26,4 +26,4 @@ points() -> cowboy_router:compile([{'_', [
               { "/ws/[...]",     n2o_stream, []       },
               { '_',             n2o_cowboy, []       }]}]).
 
-log_modules() -> [n2o_client,n2o_nitrogen,n2o_stream,wf_convert].
+log_modules() -> [n2o_client,n2o_nitrogen,n2o_stream,wf_convert, new_achieve].
