@@ -16,7 +16,7 @@
 		%feizhai_id,
 		public_token :: public_token(),
 		private_token :: private_token(),
-		achieve_progre_ids = [] % list of id to TABLE achieve_progress
+		progress_ids = [] % list of id to TABLE progress
 		}).
 -record(achieves, {?ITERATOR(achieves, true),
 		%achieve_id,
@@ -26,7 +26,7 @@
 		validatror :: progre_validator
 		}).
 
--record(achieve_progress, {?ITERATOR(achieve_progress, true),
+-record(progress, {?ITERATOR(progress, true),
 			%progress_id
 			   % maybe add a feizhai_id??? no need?
 			achieve_id,
