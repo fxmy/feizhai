@@ -16,6 +16,7 @@
 		%feizhai_id,
 		public_token :: public_token(),
 		private_token :: private_token(),
+		void_after = undefined :: undefined | canlendar:datetime(),
 		progress_ids = [] % list of id to TABLE progress
 		}).
 -record(achieves, {?ITERATOR(achieves, true),
