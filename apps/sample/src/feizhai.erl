@@ -9,7 +9,7 @@ metainfo() ->
 	#schema{name=kvs, tables=[
 				#table{name=feizhai, container=feed, fields=record_info(fields, feizhai)},
 				#table{name=achieves, container=feed, fields=record_info(fields, achieves)},
-				#table{name=achieve_progress, container=feed, fields=record_info(fields, achieve_progress)}
+				#table{name=ach_progress, container=feed, fields=record_info(fields, ach_progress)}
 				 ]}.
 
 -spec new_feizhai() -> {binary(),binary(),calendar:datetime()}.

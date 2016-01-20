@@ -17,7 +17,7 @@
 		public_token :: public_token(),
 		private_token :: private_token(),
 		void_after = undefined :: undefined | canlendar:datetime(),
-		progress_ids = [] % list of id to TABLE progress
+		ach_progress_ids = [] % list of id to TABLE ach_progress
 		}).
 -record(achieves, {?ITERATOR(achieves, true),
 		%achieve_id,
@@ -27,7 +27,7 @@
 		validatror :: progre_validator
 		}).
 
--record(progress, {?ITERATOR(progress, true),
+-record(ach_progress, {?ITERATOR(ach_progress, true),
 			%progress_id
 			   % maybe add a feizhai_id??? no need?
 			achieve_id,
