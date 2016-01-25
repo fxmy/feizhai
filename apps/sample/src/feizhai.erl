@@ -12,6 +12,11 @@ metainfo() ->
 				#table{name=ach_progress, container=feed, fields=record_info(fields, ach_progress)}
 				 ]}.
 
+snip() ->
+	kvs:entries(kvs:get(feed,achieves), achievees, 10),
+	F = fun() -> ok end,
+	kvs:add(#achieves{id = kvs:next_id(achieves,1), description = <<"wft诶嘿嘿"/utf8>>, times_needed = 3, validator = F}).
+
 -spec new_feizhai() -> {binary(),binary(),calendar:datetime()}.
 new_feizhai() ->
 	PublicToken = new_token(10),

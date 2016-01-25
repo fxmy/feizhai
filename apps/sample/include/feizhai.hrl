@@ -19,15 +19,16 @@
 		void_after = undefined :: undefined | canlendar:datetime(),
 		ach_progress_ids = [] % list of id to TABLE ach_progress
 		}).
--record(achieves, {?ITERATOR(achieves, true),
+-record(achieves, {?ITERATOR(feed, true),
 		%achieve_id,
 		   % per achieve validate fun() needed
 		description = <<>>,
 		times_needed :: times_needed(),
-		validatror :: progre_validator
+		precondition = [],  % other achieves as precondition
+		validator :: progre_validator
 		}).
 
--record(ach_progress, {?ITERATOR(ach_progress, true),
+-record(ach_progress, {?ITERATOR(feed, true),
 			%progress_id
 			   % maybe add a feizhai_id??? no need?
 			achieve_id,
