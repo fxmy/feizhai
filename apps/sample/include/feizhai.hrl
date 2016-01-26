@@ -9,14 +9,14 @@
 -type longti() :: number(). %-180.0 .. 180.0.
 -type times_needed() :: pos_integer().
 -type geohash() :: binary().
--type progre() :: {non_neg_integer()|done, [{{lati(), longti()}, geohash(), canlendar:datetime()}] }.
+-type progre() :: {non_neg_integer()|done, [{{lati(), longti()}, geohash(), calendar:datetime()}] }.
 -type progre_validator() :: fun((...) -> integer() | boolean() ).
 
 -record(feizhai, {?ITERATOR(feed, true),
 		%feizhai_id,
 		public_token :: public_token(),
 		private_token :: private_token(),
-		void_after = undefined :: undefined | canlendar:datetime(),
+		last_active = {{1970,1,1},{0,0,0}} :: canlendar:datetime(),
 		ach_progress_ids = [] % list of id to TABLE ach_progress
 		}).
 -record(achieves, {?ITERATOR(feed, true),
