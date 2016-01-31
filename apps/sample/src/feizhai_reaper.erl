@@ -11,13 +11,15 @@
 %%	pros: efficient, easy to use
 %%	cons: need *solid logic* to guard seperate bottom record
 
-%% use gen_server timeout to auto-expire feizhai
+%% use wf message bus & gen_server timeout to track & auto-expire feizhai
 -module(feizhai_reaper).
 
 -behaviour(gen_server).
 
+-include_lib("kvs/include/metainfo.hrl").
+
 %% API
--export([start_link/0]).
+-export([start_link/0, metainfo/0]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -27,7 +29,8 @@
          terminate/2,
          code_change/3]).
 
--record(state, {}).
+-record(state, {feizhai_id, trigger_time}).
+-record(feizhai_target, {id, feizhai_token, last_active}).
 
 %%%===================================================================
 %%% API
@@ -59,6 +62,7 @@ start_link() ->
 %% @end
 %%--------------------------------------------------------------------
 init([]) ->
+	wf:reg(channel_reap),
     {ok, #state{}}.
 
 %%--------------------------------------------------------------------
@@ -103,6 +107,7 @@ handle_cast(_Msg, State) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_info(_Info, State) ->
+	wf:info(?MODULE, "~p got info ~p", [self(), _Info]),
     {noreply, State}.
 
 %%--------------------------------------------------------------------
@@ -133,3 +138,7 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+metainfo() ->
+	#schema{name=kvs, tables=[
+				  #table{name=feizhai_target, fields=record_info(fields, feizhai_target)}
+				 ]}.
