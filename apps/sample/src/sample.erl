@@ -4,6 +4,10 @@
 -export([init/1, start/2, stop/1, main/1]).
 -compile(export_all).
 
+-define(CHILD(Id, Mod, Type, Args), {Id, {Mod, start_link, Args},
+                                     permanent, 5000, Type, [Mod]}).
+
+
 main(A)    -> mad_repl:sh(A).
 start(_,_) -> supervisor:start_link({local,sample},sample,[]).
 stop(_)    -> ok.
@@ -14,7 +18,7 @@ init([])   -> case cowboy:start_http(http,3,port(),env()) of
 	      io:format("~nJOIN~n"),
 	      sup().
 
-sup()    -> { ok, { { one_for_one, 5, 100 }, [] } }.
+sup()    -> { ok, { { one_for_one, 5, 100 }, [ ?CHILD(feizhai_reaper_sup, feizhai_reaper_sup, supervisor, []) ] } }.
 env()    -> [ { env, [ { dispatch, points() } ] } ].
 static() ->   { dir, "apps/sample/priv/static", mime() }.
 n2o()    ->   { dir, "deps/n2o/priv",           mime() }.
@@ -26,4 +30,4 @@ points() -> cowboy_router:compile([{'_', [
               { "/ws/[...]",     n2o_stream, []       },
               { '_',             n2o_cowboy, []       }]}]).
 
-log_modules() -> [n2o_client,n2o_nitrogen,n2o_stream,wf_convert, new_achieve].
+log_modules() -> [n2o_client,n2o_nitrogen,n2o_stream,wf_convert, new_achieve, feizhai_reaper].
