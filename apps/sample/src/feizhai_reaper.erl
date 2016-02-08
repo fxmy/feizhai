@@ -17,6 +17,7 @@
 -behaviour(gen_server).
 
 -include_lib("kvs/include/metainfo.hrl").
+-include_lib("sample/include/feizhai.hrl").
 
 %% API
 -export([start_link/0, metainfo/0]).
@@ -29,7 +30,9 @@
          terminate/2,
          code_change/3]).
 
--record(state, {feizhai_id, trigger_time}).
+-compile([export_all]).
+
+-record(state, {feizhai_id, triggerT}).
 -record(feizhai_target, {id, feizhai_token, last_active}).
 
 %%%===================================================================
@@ -63,7 +66,39 @@ start_link() ->
 %%--------------------------------------------------------------------
 init([]) ->
 	wf:reg(channel_reap),
-    {ok, #state{}}.
+	case kvs:get(feizhai_target, 1) of
+		{ok, #feizhai_target{id=1, feizhai_token=FZtoken, last_active=LAdatetime}} ->
+			%% started from a prior state (feizhai table not empty, eg app rebooted
+			%%
+			%% assert last_active consistency
+			{ok,#feizhai{id=FZtoken,
+				     public_token=FZtoken,
+				     last_active=LAdatetime,
+				     prev=undefined}} = kvs:get(feizhai,FZtoken),
+			Now = calendar:datetime_to_gregorian_seconds( calendar:universal_time()),
+			Future = calendar:datetime_to_gregorian_seconds(LAdatetime) + wf:config(sample, feizhai_life, 5*60),
+			case (Delta=Future-Now)>0 of
+				true -> %not yet
+					wf:info(?MODULE,"not yet~n",[]),
+					{ok, #state{feizhai_id=FZtoken,triggerT=Future}, Delta*1000};
+				false -> %maybe more than one feizhai need to be reapped
+					wf:info(?MODULE,"maybe more than one feizhai need to be reapped~n",[]),
+					{LastIdAlive, LAliveDT, DeadFZs} =
+					decayed_feizhai_ids(FZtoken, Now - wf:config(sample, feizhai_life, 5*60)),
+					%clean up already dead ones
+					[kvs:remove(feizhai, Id) || Id <- DeadFZs],
+					{Timeout,TrigT} = calc_init_timeout(LastIdAlive, LAliveDT,
+									    wf:config(sample, feizhai_life, 5*60),
+									    Now),
+					%update feizhai_target
+					update_fz_target(LastIdAlive, LAliveDT),
+					{ok, #state{feizhai_id=LastIdAlive,triggerT=TrigT}, Timeout}
+			end;
+		{error, not_found} ->
+			%% feizhai table all empty
+			wf:info(?MODULE,"feizhai table empty when initing~n",[]),
+			{ok, #state{}, hibernate}
+	end.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -142,3 +177,34 @@ metainfo() ->
 	#schema{name=kvs, tables=[
 				  #table{name=feizhai_target, fields=record_info(fields, feizhai_target)}
 				 ]}.
+
+%% search for outdated feizhai starting from bottom up in the KVS-Chain
+decayed_feizhai_ids(IdLast, GregrSec) when is_integer(GregrSec) ->
+	DateTime = calendar:gregorian_seconds_to_datetime(GregrSec),
+	{OldestId, LA, Decayed} = decayed_feizhai_ids(IdLast, DateTime, []),
+	{OldestId, LA, lists:reverse(Decayed)}.
+
+decayed_feizhai_ids(IdLast, DateTime, Acc) ->
+	{ok, #feizhai{id=IdLast,public_token=IdLast,last_active=LA,next=NextId}} = kvs:get(feizhai, IdLast),
+	case LA > DateTime of
+		true ->
+			{IdLast,LA,Acc};
+		false ->
+			case NextId of
+				undefined ->
+					{undefined,hibernate,[IdLast|Acc]};
+				_Other ->
+					decayed_feizhai_ids(NextId, DateTime, [IdLast|Acc])
+			end
+	end.
+
+update_fz_target(undefined, hibernate) ->
+	kvs:delete(feizhai_target, 1);
+update_fz_target(FZtoken, LastActive) ->
+	kvs:put(#feizhai_target{id=1,feizhai_token=FZtoken,last_active=LastActive}).
+
+calc_init_timeout(undefined, hibernate, _DefaultSec, _NowSec) ->
+	{hibernate, undefined};
+calc_init_timeout(_LastIdAlive, LAliveDT, DefaultSec, NowSec) ->
+	Timeout=1000*(calendar:datetime_to_gregorian_seconds(LAliveDT)+DefaultSec-NowSec),
+	{Timeout, LAliveDT}.
