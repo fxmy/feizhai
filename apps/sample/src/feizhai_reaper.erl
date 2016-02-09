@@ -141,9 +141,22 @@ init([]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_info(_Info, State) ->
-	wf:info(?MODULE, "~p got info ~p", [self(), _Info]),
-    {noreply, State}.
+handle_info(timeout, #state{feizhai_id=DeadFZId,triggerT=_TriDT}) ->% time to reap the last one
+	wf:info(?MODULE, "got timeout~n", []),
+	Now = calendar:datetime_to_gregorian_seconds( calendar:universal_time()),
+	{LastIdAlive, LAliveDT, DeadFZs} =
+	decayed_feizhai_ids(DeadFZId, Now - wf:config(sample, feizhai_life, 5*60)),
+	%clean up already dead ones
+	[kvs:remove(feizhai, Id) || Id <- DeadFZs],
+	{Timeout,TrigT} = calc_init_timeout(LastIdAlive, LAliveDT,
+					    wf:config(sample, feizhai_life, 5*60),
+					    Now),
+	%update feizhai_target
+	update_fz_target(LastIdAlive, LAliveDT),
+	{noreply, #state{feizhai_id=LastIdAlive,triggerT=TrigT}, Timeout}.
+%handle_info(_Info, State) ->
+%	wf:info(?MODULE, "~p got info ~p", [self(), _Info]),
+%    {noreply, State}.
 
 %%--------------------------------------------------------------------
 %% @private
