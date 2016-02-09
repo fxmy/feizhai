@@ -203,8 +203,11 @@ update_fz_target(undefined, hibernate) ->
 update_fz_target(FZtoken, LastActive) ->
 	kvs:put(#feizhai_target{id=1,feizhai_token=FZtoken,last_active=LastActive}).
 
+-spec calc_init_timeout(undefined|binary(),hibernate|calendar:datetime(),integer(),integer()) ->
+	{hibernate|integer(), undefined|calendar:datetime()}.
 calc_init_timeout(undefined, hibernate, _DefaultSec, _NowSec) ->
 	{hibernate, undefined};
 calc_init_timeout(_LastIdAlive, LAliveDT, DefaultSec, NowSec) ->
-	Timeout=1000*(calendar:datetime_to_gregorian_seconds(LAliveDT)+DefaultSec-NowSec),
-	{Timeout, LAliveDT}.
+	TriggerTSec = calendar:datetime_to_gregorian_seconds(LAliveDT)+DefaultSec,
+	Timeout=1000*(TriggerTSec-NowSec),
+	{Timeout, calendar:gregorian_seconds_to_datetime(TriggerTSec)}.
