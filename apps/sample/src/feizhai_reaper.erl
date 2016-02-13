@@ -141,6 +141,13 @@ init([]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_info({lastFZchange,NewLastId,NewLaAlDT}, #state{feizhai_id=_Last, triggerDT=_TriDT}) ->
+	update_fz_target(NewLastId, NewLaAlDT),
+	NowSec = calendar:datetime_to_gregorian_seconds(calendar:universal_time()),
+	FutureSec = calendar:datetime_to_gregorian_seconds(NewLaAlDT)+wf:config(sample, feizhai_life, 5*60),
+	Timeout = 1000*(FutureSec - NowSec),
+	wf:info(?MODULE, "got lastFZchange:~p, last active in ~p, timeout in ~p~n", [NewLastId,NewLaAlDT, Timeout/1000]),
+	{noreply, #state{feizhai_id=NewLastId,triggerDT=calendar:gregorian_seconds_to_datetime(FutureSec)}, Timeout};
 handle_info(timeout, #state{feizhai_id=DeadFZId,triggerDT=_TriDT}) ->% time to reap the last one
 	wf:info(?MODULE, "got timeout when ~p died~n", [DeadFZId]),
 	Now = calendar:datetime_to_gregorian_seconds( calendar:universal_time()),
