@@ -32,7 +32,7 @@
 
 -compile([export_all]).
 
--record(state, {feizhai_id, triggerT}).
+-record(state, {feizhai_id, triggerDT}).
 -record(feizhai_target, {id, feizhai_token, last_active}).
 
 %%%===================================================================
@@ -80,7 +80,7 @@ init([]) ->
 			case (Delta=Future-Now)>0 of
 				true -> %not yet
 					wf:info(?MODULE,"not yet~n",[]),
-					{ok, #state{feizhai_id=FZtoken,triggerT=Future}, Delta*1000};
+					{ok, #state{feizhai_id=FZtoken,triggerDT=calendar:gregorian_seconds_to_datetime(Future)}, Delta*1000};
 				false -> %maybe more than one feizhai need to be reapped
 					wf:info(?MODULE,"maybe more than one feizhai need to be reapped~n",[]),
 					{LastIdAlive, LAliveDT, DeadFZs} =
@@ -92,7 +92,7 @@ init([]) ->
 									    Now),
 					%update feizhai_target
 					update_fz_target(LastIdAlive, LAliveDT),
-					{ok, #state{feizhai_id=LastIdAlive,triggerT=TrigT}, Timeout}
+					{ok, #state{feizhai_id=LastIdAlive,triggerDT=TrigT}, Timeout}
 			end;
 		{error, not_found} ->
 			%% feizhai table all empty
@@ -141,19 +141,19 @@ init([]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_info(timeout, #state{feizhai_id=DeadFZId,triggerT=_TriDT}) ->% time to reap the last one
-	wf:info(?MODULE, "got timeout~n", []),
+handle_info(timeout, #state{feizhai_id=DeadFZId,triggerDT=_TriDT}) ->% time to reap the last one
+	wf:info(?MODULE, "got timeout when ~p died~n", [DeadFZId]),
 	Now = calendar:datetime_to_gregorian_seconds( calendar:universal_time()),
 	{LastIdAlive, LAliveDT, DeadFZs} =
 	decayed_feizhai_ids(DeadFZId, Now - wf:config(sample, feizhai_life, 5*60)),
 	%clean up already dead ones
 	[kvs:remove(feizhai, Id) || Id <- DeadFZs],
-	{Timeout,TrigT} = calc_init_timeout(LastIdAlive, LAliveDT,
+	{Timeout,TrigDT} = calc_init_timeout(LastIdAlive, LAliveDT,
 					    wf:config(sample, feizhai_life, 5*60),
 					    Now),
 	%update feizhai_target
 	update_fz_target(LastIdAlive, LAliveDT),
-	{noreply, #state{feizhai_id=LastIdAlive,triggerT=TrigT}, Timeout}.
+	{noreply, #state{feizhai_id=LastIdAlive,triggerDT=TrigDT}, Timeout}.
 %handle_info(_Info, State) ->
 %	wf:info(?MODULE, "~p got info ~p", [self(), _Info]),
 %    {noreply, State}.
