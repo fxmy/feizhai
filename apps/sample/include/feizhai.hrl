@@ -25,7 +25,7 @@
 		description = <<>>,
 		times_needed :: times_needed(),
 		precondition = [],  % other achieves as precondition
-		validator :: progre_validator
+		validator :: progre_validator()
 		}).
 
 -record(ach_progress, {?ITERATOR(feed, true),
