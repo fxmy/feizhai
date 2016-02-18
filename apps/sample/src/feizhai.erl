@@ -9,7 +9,7 @@ metainfo() ->
 	#schema{name=kvs, tables=[
 				#table{name=feizhai, container=feed, fields=record_info(fields, feizhai)},
 				#table{name=achieves, container=feed, fields=record_info(fields, achieves)},
-				#table{name=ach_progress, container=feed, fields=record_info(fields, ach_progress)}
+			#table{name=ach_progress, container=feed, fields=record_info(fields, ach_progress),keys=[achieve_id]}
 				 ]}.
 
 snip() ->

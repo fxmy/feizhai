@@ -20,3 +20,8 @@ notify() ->
 
 	kvs:remove(feizhai, PuTo),
 	kvs:add(A).
+
+secIndex() ->
+	kvs:add(#achieves{id=kvs:next_id("achieves",1), description= <<"the world!">>, times_needed= 5}),
+	kvs:add(#ach_progress{id=kvs:next_id("ach_progress", 1), feed_id= {ach_progress,<<"fei">>}, achieve_id=1, progre={1, [ {233,233}, <<"magicgeohash">>, calendar:universal_time() ] } }),
+	kvs:index(ach_progress, achieve_id, 1).

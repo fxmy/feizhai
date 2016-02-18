@@ -16,7 +16,7 @@
 		%feizhai_id,
 		public_token :: public_token(),
 		private_token :: private_token(),
-		last_active = {{1970,1,1},{0,0,0}} :: canlendar:datetime(),
+		last_active = {{1970,1,1},{0,0,0}} :: calendar:datetime(),
 		ach_progress_ids = [] % list of id to TABLE ach_progress
 		}).
 -record(achieves, {?ITERATOR(feed, true),
@@ -29,10 +29,10 @@
 		}).
 
 -record(ach_progress, {?ITERATOR(feed, true),
-			%progress_id
-			   % maybe add a feizhai_id??? no need?
-			achieve_id,
-			progre = {0, []} :: progre() % {times_done, [{{lati,longti}, geohash, time}] }
+		%progress_id
+		   % maybe add a feizhai_id??? no need?
+		achieve_id,
+		progre = {0, []} :: progre() % {times_done, [{{lati,longti}, geohash, time}] }
 			}).
 
 -endif.
