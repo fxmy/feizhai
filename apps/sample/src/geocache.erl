@@ -2,8 +2,10 @@
 
 -behaviour(gen_server).
 
+-include_lib("kvs/include/metainfo.hrl").
+
 %% API functions
--export([start_link/0]).
+-export([start_link/0, metainfo/0]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -12,6 +14,10 @@
          handle_info/2,
          terminate/2,
          code_change/3]).
+
+-compile([export_all]).
+
+-record(geocache, {geohash, ach_progress_ids=[]}). %% { binary(),[integer()] }
 
 %%%===================================================================
 %%% API functions
@@ -59,9 +65,11 @@ init([]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call(_Request, _From, State) ->
-    Reply = ok,
-    {reply, Reply, State}.
+handle_call({getEntry, Geohash}, _From, Trie) when is_binary(Geohash) ->
+	{noreply, Trie};
+handle_call(Request, From, State) ->
+	wf:info(?MODULE, "got unexpected call: ~p from~p~n", [Request, From]),
+	{noreply, State}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -73,7 +81,26 @@ handle_call(_Request, _From, State) ->
 %%                                  {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_cast(_Msg, State) ->
+handle_cast({new_entry, Geohash, Value}, Trie) when is_binary(Geohash) ->
+	case kvs:get(geocache, Geohash) of
+		{error, not_found} ->
+			kvs:put(#geocache{geohash=Geohash, ach_progress_ids=[Value]});
+		{ok, #geocache{geohash=Geohash, ach_progress_ids=OldAcPrIds}} ->
+			New = uappend(Value, OldAcPrIds),
+			kvs:put(#geocache{geohash=Geohash, ach_progress_ids=New})
+	end,
+	GeoList = binary_to_list(Geohash),
+	NewTrie = case trie:is_key(GeoList,Trie) of
+		false ->
+			trie:prefix(GeoList, Value, Trie);
+		true ->
+			OldValues = trie:fetch(GeoList, Trie),
+			NewValues = uappend(Value, OldValues),
+			trie:store(GeoList, NewValues, Trie)
+	end,
+	{noreply, NewTrie};
+handle_cast(Msg, State) ->
+	wf:info(?MODULE, "got unexpected cast: ~p~n", [Msg]),
     {noreply, State}.
 
 %%--------------------------------------------------------------------
@@ -86,7 +113,8 @@ handle_cast(_Msg, State) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_info(_Info, State) ->
+handle_info(Info, State) ->
+	wf:info(?MODULE, "got unexpected info: ~p~n", [Info]),
     {noreply, State}.
 
 %%--------------------------------------------------------------------
@@ -117,3 +145,13 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+metainfo() ->
+	#schema{name=kvs, tables=[
+				  #table{name=geocache, fields=record_info(fields, geocache)}
+				 ]}.
+
+-spec uappend(any(), list()) -> list().
+uappend(Value, List) when is_list(List) ->
+	%F = fun(Elem) -> Value =:= Elem end,
+	%[Value|lists:dropwhile(F, List)].
+	[Value| [X || X<-List, X =/=Value]].
