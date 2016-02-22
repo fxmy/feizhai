@@ -33,6 +33,12 @@
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
+newentry(Geohash, Value) when is_binary(Geohash) ->
+	gen_server:cast(?MODULE, {newentry, Geohash, Value}).
+
+getentry(Geohash) when is_binary(Geohash) ->
+	gen_server:call(?MODULE, {getentry, Geohash}).
+
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
@@ -65,7 +71,7 @@ init([]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call({getEntry, Geohash}, _From, Trie) when is_binary(Geohash) ->
+handle_call({getentry, Geohash}, _From, Trie) when is_binary(Geohash) ->
 	GeoList = binary_to_list(Geohash),
 	Top = trie:fold_match(GeoList, fun gether/3, [], Trie),
 	Sub = trie:fold_match(GeoList++"*", fun gether/3, [], Trie),
@@ -94,7 +100,7 @@ handle_call(Request, From, State) ->
 %%                                  {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_cast({new_entry, Geohash, Value}, Trie) when is_binary(Geohash) ->
+handle_cast({newentry, Geohash, Value}, Trie) when is_binary(Geohash) ->
 	GeoList = binary_to_list(Geohash),
 	case kvs:get(geocache, GeoList) of
 		{error, not_found} ->
