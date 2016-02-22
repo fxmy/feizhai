@@ -17,7 +17,7 @@
 
 -compile([export_all]).
 
--record(geocache, {geohash, ach_progress_ids=[]}). %% { binary(),[integer()] }
+-record(geocache, {geohash, ach_progress_ids=[]}). %% { string(),[integer()] }
 
 %%%===================================================================
 %%% API functions
@@ -66,7 +66,20 @@ init([]) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_call({getEntry, Geohash}, _From, Trie) when is_binary(Geohash) ->
-	{noreply, Trie};
+	GeoList = binary_to_list(Geohash),
+	Top = trie:fold_match(GeoList, fun gether/3, [], Trie),
+	Sub = trie:fold_match(GeoList++"*", fun gether/3, [], Trie),
+	Total = Top++Sub,
+	io:format("->~p,~p,~p~n",[Top, Sub,Total]),
+	case Total of
+		[] -> % time to check mnesia
+		      % !!!mnesia dependency!!!
+			Res = mnesia:async_dirty(fun mnesia_geoprefix_get/1, [GeoList]),
+			NewTrie = lists:foldl(fun updatetrie/2,Trie,Res),
+			{reply, trie:fetch(GeoList,NewTrie), NewTrie};
+		_ ->
+			{reply, Total, Trie}
+	end;
 handle_call(Request, From, State) ->
 	wf:info(?MODULE, "got unexpected call: ~p from~p~n", [Request, From]),
 	{noreply, State}.
@@ -82,14 +95,14 @@ handle_call(Request, From, State) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_cast({new_entry, Geohash, Value}, Trie) when is_binary(Geohash) ->
-	case kvs:get(geocache, Geohash) of
-		{error, not_found} ->
-			kvs:put(#geocache{geohash=Geohash, ach_progress_ids=[Value]});
-		{ok, #geocache{geohash=Geohash, ach_progress_ids=OldAcPrIds}} ->
-			New = uappend(Value, OldAcPrIds),
-			kvs:put(#geocache{geohash=Geohash, ach_progress_ids=New})
-	end,
 	GeoList = binary_to_list(Geohash),
+	case kvs:get(geocache, GeoList) of
+		{error, not_found} ->
+			kvs:put(#geocache{geohash=GeoList, ach_progress_ids=[Value]});
+		{ok, #geocache{geohash=GeoList, ach_progress_ids=OldAcPrIds}} ->
+			New = uappend(Value, OldAcPrIds),
+			kvs:put(#geocache{geohash=GeoList, ach_progress_ids=New})
+	end,
 	NewTrie = case trie:is_key(GeoList,Trie) of
 		false ->
 			trie:prefix(GeoList, Value, Trie);
@@ -152,6 +165,24 @@ metainfo() ->
 
 -spec uappend(any(), list()) -> list().
 uappend(Value, List) when is_list(List) ->
-	%F = fun(Elem) -> Value =:= Elem end,
-	%[Value|lists:dropwhile(F, List)].
 	[Value| [X || X<-List, X =/=Value]].
+
+-spec gether(Key::string(), Value::any(), Acc::list()) -> list().
+gether(Key, Value, Acc) ->
+	[{Key,Value}|Acc].
+
+-spec mnesia_geoprefix_get(string()) ->list(). % |no_return(). ?
+mnesia_geoprefix_get(Prefix) when is_list(Prefix) ->
+	mnesia:match_object(#geocache{geohash= Prefix++'_', ach_progress_ids = '_'}).
+
+updatetrie(#geocache{geohash=GeoList,ach_progress_ids=Values}, TrieIn) ->
+	case trie:is_key(GeoList,TrieIn) of
+		false ->
+			trie:store(GeoList, Values, TrieIn);
+		true ->
+			OldValues = trie:fetch(GeoList, TrieIn),
+			io:format("=>~p ~p~n",[OldValues, Values]),
+			NewValues = lists:reverse(lists:umerge(lists:sort(OldValues),lists:sort(Values))),
+			io:format("->~p~n",[NewValues]),
+			trie:store(GeoList, NewValues, TrieIn)
+	end.
