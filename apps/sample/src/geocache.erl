@@ -70,13 +70,13 @@ handle_call({getEntry, Geohash}, _From, Trie) when is_binary(Geohash) ->
 	Top = trie:fold_match(GeoList, fun gether/3, [], Trie),
 	Sub = trie:fold_match(GeoList++"*", fun gether/3, [], Trie),
 	Total = Top++Sub,
-	io:format("->~p,~p,~p~n",[Top, Sub,Total]),
 	case Total of
 		[] -> % time to check mnesia
 		      % !!!mnesia dependency!!!
 			Res = mnesia:async_dirty(fun mnesia_geoprefix_get/1, [GeoList]),
 			NewTrie = lists:foldl(fun updatetrie/2,Trie,Res),
-			{reply, trie:fetch(GeoList,NewTrie), NewTrie};
+			ProgIds = lists:umerge([lists:sort(X)||#geocache{ach_progress_ids=X} <- Res]),
+			{reply, lists:reverse(ProgIds), NewTrie};
 		_ ->
 			{reply, Total, Trie}
 	end;
