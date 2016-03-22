@@ -3,7 +3,7 @@
 -behaviour(gen_server).
 
 %% API functions
--export([start_link/0]).
+-export([start_link/0, checkspam/1, newpost/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -14,7 +14,6 @@
          code_change/3]).
 
 -record(iptracker, {ip, lastposttime}).
--record(state, {}).
 
 %%%===================================================================
 %%% API functions
@@ -29,6 +28,12 @@
 %%--------------------------------------------------------------------
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+
+checkspam(IP) ->
+	gen_server:call(?MODULE, {checkspam, IP}).
+
+newpost(IP) ->
+	gen_server:cast(?MODULE, {newpost, IP}).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -46,7 +51,7 @@ start_link() ->
 %% @end
 %%--------------------------------------------------------------------
 init([]) ->
-    {ok, #state{}}.
+    {ok, ets:new(?MODULE, [set,named_table,{keypos,#iptracker.ip},public])}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -62,9 +67,18 @@ init([]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_call({checkspam,IP}, _From, ETSTid) ->
+	Now = calendar:datetime_to_gregorian_seconds( calendar:universal_time()),
+	case ets:lookup(?MODULE, IP) of
+		[] -> {reply, nospam, ETSTid};
+		[#iptracker{lastposttime=LstPstT}] ->
+			case LstPstT + wf:config(sample, antispaminterval, 30) > Now of
+				false -> {reply, nospam, ETSTid};
+				true -> {reply, spam, ETSTid}
+			end
+	end;
 handle_call(_Request, _From, State) ->
-    Reply = ok,
-    {reply, Reply, State}.
+    {noreply, State}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -76,6 +90,10 @@ handle_call(_Request, _From, State) ->
 %%                                  {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_cast({newpost, IP}, ETSTid) ->
+	Now = calendar:datetime_to_gregorian_seconds(calendar:universal_time()),
+	ets:insert(?MODULE, #iptracker{ip=IP,lastposttime=Now}),
+	{noreply, ETSTid};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
