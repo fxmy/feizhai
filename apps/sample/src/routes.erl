@@ -14,6 +14,7 @@ prefix(<<"/",P/binary>>)    -> route(P);
 prefix(P)                   -> route(P).
 
 route(<<>>)                 -> index;
+route(<<"ggl">>)	    -> gglmp;
 route(<<"new">>)            -> new_achieve;
 route(<<"index">>)          -> index;
 route(<<"favicon.ico">>)    -> index;
