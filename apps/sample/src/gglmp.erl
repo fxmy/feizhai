@@ -3,13 +3,14 @@
 -include_lib("n2o/include/wf.hrl").
 -include_lib("nitro/include/nitro.hrl").
 
-%peer()    -> wf:to_list(wf:peer(?REQ)).
-%message() -> wf:js_escape(wf:html_encode(wf:to_list(wf:q(message)))).
-main()    -> #dtl{file="gglmp",app=sample}. %,bindings=[{body,body()}]}.
-%body()    -> [ #panel{id=history}, #textbox{id=message},
-%               #button{id=send,body="Chat",postback=chat,source=[message]} ].
+main()    -> #dtl{file="gglmp",app=sample, bindings=[{authkey,authkey()}, {presentmap,presentmap()}, {initmapfunc,initmapfunc()}]}.
+authkey() -> "AIzaSyAAbNcNrZoGgi8YMdZ98Z3UGPXxM8PsbBU".
+presentmap() -> "XiaoSuiGu".
+initmapfunc() -> "var map;function "++presentmap()++"() {map = new google.maps.Map(document.getElementById('map'),{center: {lat: 60.192059, lng: 24.945831},zoom: 12});}".
 
-%event(init) -> wf:reg(room);
-%event(chat) -> wf:send(room,{client,{peer(),message()}});
-%event({client,{P,M}}) -> wf:insert_bottom(history,#panel{id=history,body=[P,": ",M,#br{}]});
-%event(Event) -> wf:info(?MODULE,"Unknown Event: ~p~n",[Event]).
+event(init) ->
+	wf:wire("console.log('!!!event init!!!')"),
+	wf:info(?MODULE,"~p-> init!~n",[self()]);
+event(terminate) ->
+	wf:info(?MODULE,"~p-> Terminate!~n",[self()]);
+event(Event) -> wf:info(?MODULE,"~p-> Unknown Event: ~p~n",[self(),Event]).
