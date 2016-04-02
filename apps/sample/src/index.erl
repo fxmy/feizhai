@@ -6,10 +6,16 @@
 peer()    -> wf:to_list(wf:peer(?REQ)).
 message() -> wf:js_escape(wf:html_encode(wf:to_list(wf:q(message)))).
 main()    -> #dtl{file="index",app=sample,bindings=[{body,body()}]}.
-body()    -> [ #panel{id=history}, #textbox{id=message},
-               #button{id=send,body="Chat",postback=chat,source=[message]} ].
+body()    -> [#panel{class=["fixed-action-btn"],style=["bottom: 45px; right: 24px;"],body=[
+		#link{id=aaa,class=["btn-floating btn-large red"],postback=btn,source=[message],body=[
+			#i{class=["large material-icons"],body=["mode_edit"]}]}
+              ]},
+	      #panel{id=history},
+	      #textbox{id=message},
+	      #button{id=send,body="Chat",postback=chat,source=[message]} ].
 
 event(init) -> wf:reg(room);
 event(chat) -> wf:send(room,{client,{peer(),message()}});
+event(btn) ->  event(chat);
 event({client,{P,M}}) -> wf:insert_bottom(history,#panel{id=history,body=[P,": ",M,#br{}]});
 event(Event) -> wf:info(?MODULE,"Unknown Event: ~p~n",[Event]).
