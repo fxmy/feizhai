@@ -13,7 +13,27 @@ authkey() -> "AIzaSyAAbNcNrZoGgi8YMdZ98Z3UGPXxM8PsbBU".
 presentmap() -> "XiaoSuiGu".
 initmapfunc() -> "var map;function "++presentmap()++"() {map = new google.maps.Map(document.getElementById('map'),{center: {lat: 60.192059, lng: 24.945831},zoom: 12,mapTypeControl:false,fullscreenControl:true});}".
 
-event(btn) -> wf:wire("console.log('btn!')");
+event(btn) -> wf:wire("console.log('btn!');"),
+	      %wf:insert_after(map,#script{type="text/javascript",body=[<<"function handleLocationError() {}">>]});
+	      wf:wire("var hndlLctnErr = new Function('a','b','c','b.setPosition(c);b.setContent(a ? \"Error: The Geolocation service failed.\" : \"Error: Your browser doesn`t support geolocation.\");');
+var infoWindow = new google.maps.InfoWindow({map: map});
+if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(function(position) {
+      var pos = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude
+      };
+
+      infoWindow.setPosition(pos);
+      infoWindow.setContent('Location found.');
+      map.setCenter(pos);
+    }, function() {
+      hndlLctnErr(true, infoWindow, map.getCenter());
+    });
+  } else {
+    // Browser doesn't support Geolocation
+    hndlLctnErr(false, infoWindow, map.getCenter());
+  }");
 event(init) ->
 	wf:wire("console.log('!!!event init!!!')"),
 	wf:info(?MODULE,"~p-> init!~n",[self()]);
