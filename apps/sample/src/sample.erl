@@ -22,11 +22,13 @@ sup()    -> { ok, { { one_for_one, 5, 100 }, [ ?CHILD(feizhai_reaper_sup, feizha
 env()    -> [ { env, [ { dispatch, points() } ] } ].
 static() ->   { dir, "apps/sample/priv/static", mime() }.
 n2o()    ->   { dir, "deps/n2o/priv",           mime() }.
+materialize() -> {dir, "apps/sample/priv/materialize", mime()}.
 mime()   -> [ { mimetypes, cow_mimetypes, all   } ].
 port()   -> [ { port, wf:config(n2o,port,8001)  } ].
 points() -> cowboy_router:compile([{'_', [
               { "/static/[...]", n2o_static, static() },
               { "/n2o/[...]",    n2o_static, n2o()    },
+	      { "/materialize/[...]", n2o_static, materialize()},
               { "/ws/[...]",     n2o_stream, []       },
               { '_',             n2o_cowboy, []       }]}]).
 

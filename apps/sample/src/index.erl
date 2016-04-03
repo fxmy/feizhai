@@ -6,9 +6,9 @@
 peer()    -> wf:to_list(wf:peer(?REQ)).
 message() -> wf:js_escape(wf:html_encode(wf:to_list(wf:q(message)))).
 main()    -> #dtl{file="index",app=sample,bindings=[{body,body()}]}.
-body()    -> [#panel{class=["fixed-action-btn"],style=["bottom: 45px; right: 24px;"],body=[
-		#link{id=aaa,class=["btn-floating btn-large red"],postback=btn,source=[message],body=[
-			#i{class=["large material-icons"],body=["mode_edit"]}]}
+body()    -> [#panel{class=["fixed-action-btn"],style=["bottom: 25px; right: 25px;"],body=[
+		#link{id=aaa,class=["btn-floating btn-large waves-effect waves-light red"],postback=btn,source=[message],body=[
+			#i{class=["material-icons"],body=["add"]}]}
               ]},
 	      #panel{id=history},
 	      #textbox{id=message},
