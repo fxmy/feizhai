@@ -12,10 +12,19 @@ body()    -> [#panel{class=["fixed-action-btn"],style=["bottom: 25px; right: 25p
               ]},
 	      #panel{id=history},
 	      #textbox{id=message},
-	      #button{id=send,body="Chat",postback=chat,source=[message]} ].
+	      #button{id=send,body="Chat",postback=chat,source=[message]},
+		%#textbox{id=nitro:temp_id(),disabled=true,style=["visibility: hidden;"]},
+		%#button{body="crdrcd"},
+		#hidden{id=kkk,disabled=true},
+		#button{body=nitro:temp_id(),source=[message],postback=kkk},
+		#textbox{id=qqq,disabled=true}].
+
 
 event(init) -> wf:reg(room);
 event(chat) -> wf:send(room,{client,{peer(),message()}});
 event(btn) ->  event(chat);
+event(kkk) -> wf:wire(#jq{target=kkk,property=value,right=message()}),
+	wf:wire(#jq{target=qqq,property=value,right=#jq{target=kkk,property=value}});
+	%wf:wire(#jq{target=qqq,property=value,right=#jq{target=kkk,property=value}});
 event({client,{P,M}}) -> wf:insert_bottom(history,#panel{id=history,body=[P,": ",M,#br{}]});
 event(Event) -> wf:info(?MODULE,"Unknown Event: ~p~n",[Event]).
