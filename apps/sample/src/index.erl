@@ -19,10 +19,12 @@ body()    -> [#panel{class=["fixed-action-btn"],style=["bottom: 25px; right: 25p
 		#button{body=nitro:temp_id(),source=[message],postback=kkk},
 		#textbox{id=qqq,disabled=true}].
 
+api_event(Func, Args, _Cx) ->
+	wf:info(?MODULE,"API EVENT: ~p,~p~n",[Func,Args]).
 
 event(init) -> wf:reg(room);
 event(chat) -> wf:send(room,{client,{peer(),message()}});
-event(btn) ->  event(chat);
+event(btn) ->  wf:wire(#api{name=apiName,tag=apiTag});%,delegate=apiDelegate});
 event(kkk) -> wf:wire(#jq{target=kkk,property=value,right=message()}),
 	wf:wire(#jq{target=qqq,property=value,right=#jq{target=kkk,property=value}});
 	%wf:wire(#jq{target=qqq,property=value,right=#jq{target=kkk,property=value}});
