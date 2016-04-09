@@ -12,22 +12,26 @@ body() -> [#panel{id=map},
 authkey() -> "AIzaSyAAbNcNrZoGgi8YMdZ98Z3UGPXxM8PsbBU".
 presentmap() -> "XiaoSuiGu".
 initmapfunc() -> "var map;function "++presentmap()++"() {map = new google.maps.Map(document.getElementById('map'),{center: {lat: 60.192059, lng: 24.945831},zoom: 12,mapTypeControl:false,fullscreenControl:true});}".
-infoWindowContent() -> wf:to_list(wf:render(#panel{id=infowindow,body=[
+infoWindowContent() -> wf:to_list(wf:render(#panel{id=wf:state(infowindow),body=[
 %					      #textbox{id=wf:state(achieve)},
 %					      #hidden{id=wf:state(lan),disabled=true},
 %					      #hidden{id=wf:state(lat),disabled=true},
 %					      #hidden{id=wf:state(validt),disabled=true},
 %					      #button{body= <<"成就get"/utf8>>,postback=newachieve}
 					     ]})).
+tmpidcmpac() -> lists:delete($-, wf:temp_id()).
 
 api_event(Func,Args,_Cx) -> wf:info(?MODULE, "api_event: ~p,~p~n", [Func,Args]),
-			    wf:insert_bottom(infowindow,#textbox{}),
-			    wf:insert_bottom(infowindow,#button{body= <<"成就get"/utf8>>}).
+			    wf:insert_bottom(wf:state(infowindow),#textbox{id=wf:state(achieve)}),
+			    wf:insert_bottom(wf:state(infowindow),#button{body= <<"成就get"/utf8>>}).
 
 event(newachieve) -> wf:info(?MODULE,"New Achieve~n",[]);
 event(btn) -> wf:wire("console.log('btn!');"),
-	      wf:state(achieve,wf:temp_id()),wf:state(lan,wf:temp_id()),wf:state(lat,wf:temp_id()),wf:state(validt,wf:temp_id()),
-	      wf:wire(#api{name=apiName}),
+	      wf:state(infowindow,tmpidcmpac()),
+	      wf:state(apiName,tmpidcmpac()),
+	      wf:state(achieve,tmpidcmpac()),
+	      wf:state(validt,tmpidcmpac()),
+	      wf:wire(#api{name=wf:state(apiName)}),
 	      wf:wire("var hndlLctnErr = new Function('a','b','c','b.setPosition(c);b.setContent(a ? \"Error: The Geolocation service failed.\" : \"Error: Your browser doesn`t support geolocation.\");');
 		      console.log('0');
 var infoWindow = new google.maps.InfoWindow({map: map});
@@ -44,7 +48,7 @@ if (navigator.geolocation) {
       infoWindow.setPosition(pos);
       infoWindow.setContent('Location found."++infoWindowContent()++"');
       map.setCenter(pos);
-      apiName(pos);
+      "++wf:state(apiName)++"(pos);
     }, function() {
       hndlLctnErr(true, infoWindow, map.getCenter());
     });
@@ -53,7 +57,7 @@ if (navigator.geolocation) {
     hndlLctnErr(false, infoWindow, map.getCenter());
   }");
 event(init) ->
-	wf:wire("console.log('!!!event init!!!')"),
+	wf:wire("console.log('!!!event init!!!');"),
 	wf:info(?MODULE,"~p-> init!~n",[self()]);
 event(terminate) ->
 	wf:info(?MODULE,"~p-> Terminate!~n",[self()]);
