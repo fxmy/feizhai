@@ -17,13 +17,32 @@ infoWindowContent() ->
 tmpidcmpac() -> lists:delete($-, wf:temp_id()).
 
 api_event(Func,Args,_Cx) ->
-	wf:info(?MODULE, "api_event: ~p,~p~n", [Func,Args]),
-	wf:insert_bottom(wf:state(infowindow),#hidden{id=wf:state(validt),disabled=true,value=wf:pickle(wf:state(validt_content))}),
-	wf:insert_bottom(wf:state(infowindow),#textbox{id=wf:state(achieve)}),
-	wf:insert_bottom(wf:state(infowindow),#button{body= <<"成就get"/utf8>>,postback=newachieve,source=[wf:state(achieve),wf:state(validt)],class=["btn waves-effect waves-light"]}).
+	ApiName = wf:state(apiName),
+	if ApiName == Func->
+		   Pos = jsone:decode(wf:to_binary(Args),[{object_format, map}]),
+		   wf:info(?MODULE, "api_event: ~p,~p~n", [Func,Pos]),
+		   wf:state(lat, maps:get(<<"lat">>, Pos)),
+		   wf:state(lng, maps:get(<<"lng">>, Pos)),
+		   wf:insert_bottom(wf:state(infowindow),#hidden{id=wf:state(validt),disabled=true,value=wf:pickle(wf:state(validt_content))}),
+		   wf:insert_bottom(wf:state(infowindow),#textbox{id=wf:state(achieve)}),
+		   wf:insert_bottom(wf:state(infowindow),#button{body= <<"成就get"/utf8>>,postback=newachieve,source=[wf:state(achieve),wf:state(validt)],class=["btn waves-effect waves-light"]});
+	   true ->
+		   wf:info(?MODULE, "apiName mismatch, expect ~p, got ~p~n", [ApiName,Func]),
+		   wf:wire("console.log('uccu apiName mismatch, ugly');")
+	end.
 
 event(newachieve) ->
-	wf:info(?MODULE,"New Achieve:~p,~p,~p~n",[wf:q(wf:state(achieve)),wf:depickle(wf:q(wf:state(validt))),wf:state(validt_content)]);
+	ServerTK = wf:state(validt_content),
+	ClientTK = wf:depickle(wf:q(wf:state(validt))),
+	if ServerTK==undefined orelse ClientTK==undefined ->
+		  wf:info(?MODULE, "Server or Client TK undefined~n",[]);
+	   ServerTK == ClientTK ->
+		   wf:info(?MODULE,"New Achieve:~p,~p,~p~n",[wf:q(wf:state(achieve)),ServerTK,ClientTK]),
+		   wf:state(validt, undefined),
+		   wf:state(validt_content, undefined);
+	   true ->
+		   wf:info(?MODULE, "ClientTK mismatch, expect ~p, got ~p~n", [ServerTK, ClientTK])
+	end;
 event(btn) ->
 	wf:wire("console.log('btn!');"),
 	wf:state(infowindow,tmpidcmpac()),
