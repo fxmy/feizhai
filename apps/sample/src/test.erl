@@ -3,8 +3,8 @@
 -include_lib("sample/include/feizhai.hrl").
 
 go() ->
-	{PuTo, _PrTo, LADT} = feizhai:new_feizhai(),
-	feizhai_reaper:update_fz_target(PuTo,LADT),
+	{ID, _PuTo, _PrTo, LADT} = feizhai:new_feizhai(),
+	feizhai_reaper:update_fz_target(ID,LADT),
 	[begin
 		 receive
 		 after 3000 ->
@@ -13,12 +13,12 @@ go() ->
 	 end || _X <- lists:seq(1,5)].
 
 notify() ->
-	[#feizhai{public_token=PuTo,next=NextId} =A|_] = kvs:entries(kvs:get(feed, feizhai),feizhai, 100),
+	[#feizhai{id=IdA,public_token=_PuTo,next=NextId} =A|_] = kvs:entries(kvs:get(feed, feizhai),feizhai, 100),
 	{ok, #feizhai{id=Id, last_active=La}} = kvs:get(feizhai, NextId),
 	wf:send(channel_reap,{lastFZchange, Id, La}),
-	io:format("========~n~p -> ~p~n=======~n",[PuTo, Id]),
+	io:format("========~n~p -> ~p~n=======~n",[IdA, Id]),
 
-	kvs:remove(feizhai, PuTo),
+	kvs:remove(feizhai, IdA),
 	kvs:add(A).
 
 secIndex() ->

@@ -17,15 +17,16 @@ snip() ->
 	F = fun() -> ok end,
 	kvs:add(#achieves{id = kvs:next_id(achieves,1), description = <<"wft诶嘿嘿"/utf8>>, times_needed = 3, validator = F}).
 
--spec new_feizhai() -> {binary(),binary(),calendar:datetime()}.
+-spec new_feizhai() -> {integer(),binary(),binary(),calendar:datetime()}.
 new_feizhai() ->
 	PublicToken = new_token(10),
 	PrivateToken = new_token(10),
 	%LifeSpan = calendar:gregorian_seconds_to_datetime( calendar:datetime_to_gregorian_seconds( calendar:universal_time()) + wf:config(sample,feizhai_life, 864000)),
 	LastAct = calendar:universal_time(),
-	Feizhai = #feizhai{id=PublicToken,public_token=PublicToken,private_token=PrivateToken,last_active=LastAct},
+	ID = kvs:next_id(feizhai, 1),
+	Feizhai = #feizhai{id=ID,public_token=PublicToken,private_token=PrivateToken,last_active=LastAct},
 	kvs:add(Feizhai),
-	{PublicToken,PrivateToken,LastAct}.
+	{ID,PublicToken,PrivateToken,LastAct}.
 
 -spec new_token( pos_integer() ) -> binary().
 new_token(Bytes) ->

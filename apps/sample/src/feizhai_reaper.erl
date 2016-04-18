@@ -67,24 +67,24 @@ start_link() ->
 init([]) ->
 	wf:reg(channel_reap),
 	case kvs:get(feizhai_target, 1) of
-		{ok, #feizhai_target{id=1, feizhai_token=FZtoken, last_active=LAdatetime}} ->
+		{ok, #feizhai_target{id=1, feizhai_token=FZId, last_active=LAdatetime}} ->
 			%% started from a prior state (feizhai table not empty, eg app rebooted
 			%%
 			%% assert last_active consistency
-			{ok,#feizhai{id=FZtoken,
-				     public_token=FZtoken,
+			{ok,#feizhai{id=FZId,
+				     public_token=_PuTK,
 				     last_active=LAdatetime,
-				     prev=undefined}} = kvs:get(feizhai,FZtoken),
+				     prev=undefined}} = kvs:get(feizhai,FZId),
 			Now = calendar:datetime_to_gregorian_seconds( calendar:universal_time()),
 			Future = calendar:datetime_to_gregorian_seconds(LAdatetime) + wf:config(sample, feizhai_life, 5*60),
 			case (Delta=Future-Now)>0 of
 				true -> %not yet
-					wf:info(?MODULE,"not yet~n",[]),
-					{ok, #state{feizhai_id=FZtoken,triggerDT=calendar:gregorian_seconds_to_datetime(Future)}, Delta*1000};
+					wf:info(?MODULE,"not yet",[]),
+					{ok, #state{feizhai_id=FZId,triggerDT=calendar:gregorian_seconds_to_datetime(Future)}, Delta*1000};
 				false -> %maybe more than one feizhai need to be reapped
-					wf:info(?MODULE,"maybe more than one feizhai need to be reapped~n",[]),
+					wf:info(?MODULE,"maybe more than one feizhai need to be reapped",[]),
 					{LastIdAlive, LAliveDT, DeadFZs} =
-					decayed_feizhai_ids(FZtoken, Now - wf:config(sample, feizhai_life, 5*60)),
+					decayed_feizhai_ids(FZId, Now - wf:config(sample, feizhai_life, 5*60)),
 					%clean up already dead ones
 					[kvs:remove(feizhai, Id) || Id <- DeadFZs],
 					{Timeout,TrigT} = calc_init_timeout(LastIdAlive, LAliveDT,
@@ -96,7 +96,7 @@ init([]) ->
 			end;
 		{error, not_found} ->
 			%% feizhai table all empty
-			wf:info(?MODULE,"feizhai table empty when initing~n",[]),
+			wf:info(?MODULE,"feizhai table empty when initing",[]),
 			{ok, #state{}, hibernate}
 	end.
 
@@ -146,10 +146,10 @@ handle_info({lastFZchange,NewLastId,NewLaAlDT}, #state{feizhai_id=_Last, trigger
 	NowSec = calendar:datetime_to_gregorian_seconds(calendar:universal_time()),
 	FutureSec = calendar:datetime_to_gregorian_seconds(NewLaAlDT)+wf:config(sample, feizhai_life, 5*60),
 	Timeout = 1000*(FutureSec - NowSec),
-	wf:info(?MODULE, "got lastFZchange:~p, last active in ~p, timeout in ~p~n", [NewLastId,NewLaAlDT, Timeout/1000]),
+	wf:info(?MODULE, "got lastFZchange:~p, last active in ~p, timeout in ~ps", [NewLastId,NewLaAlDT, Timeout/1000]),
 	{noreply, #state{feizhai_id=NewLastId,triggerDT=calendar:gregorian_seconds_to_datetime(FutureSec)}, Timeout};
 handle_info(timeout, #state{feizhai_id=DeadFZId,triggerDT=_TriDT}) ->% time to reap the last one
-	wf:info(?MODULE, "got timeout when ~p died~n", [DeadFZId]),
+	wf:info(?MODULE, "got timeout when ~p died", [DeadFZId]),
 	Now = calendar:datetime_to_gregorian_seconds( calendar:universal_time()),
 	{LastIdAlive, LAliveDT, DeadFZs} =
 	decayed_feizhai_ids(DeadFZId, Now - wf:config(sample, feizhai_life, 5*60)),
@@ -158,6 +158,7 @@ handle_info(timeout, #state{feizhai_id=DeadFZId,triggerDT=_TriDT}) ->% time to r
 	{Timeout,TrigDT} = calc_init_timeout(LastIdAlive, LAliveDT,
 					    wf:config(sample, feizhai_life, 5*60),
 					    Now),
+	wf:info(?MODULE, "next timeout: ~p", [Timeout]),
 	%update feizhai_target
 	update_fz_target(LastIdAlive, LAliveDT),
 	{noreply, #state{feizhai_id=LastIdAlive,triggerDT=TrigDT}, Timeout}.
@@ -205,7 +206,7 @@ decayed_feizhai_ids(IdLast, GregrSec) when is_integer(GregrSec) ->
 	{OldestId, LA, lists:reverse(Decayed)}.
 
 decayed_feizhai_ids(IdLast, DateTime, Acc) ->
-	{ok, #feizhai{id=IdLast,public_token=IdLast,last_active=LA,next=NextId}} = kvs:get(feizhai, IdLast),
+	{ok, #feizhai{id=IdLast,public_token=_PuTK,last_active=LA,next=NextId}} = kvs:get(feizhai, IdLast),
 	case LA > DateTime of
 		true ->
 			{IdLast,LA,Acc};
@@ -220,8 +221,8 @@ decayed_feizhai_ids(IdLast, DateTime, Acc) ->
 
 update_fz_target(undefined, hibernate) ->
 	kvs:delete(feizhai_target, 1);
-update_fz_target(FZtoken, LastActive) ->
-	kvs:put(#feizhai_target{id=1,feizhai_token=FZtoken,last_active=LastActive}).
+update_fz_target(FZId, LastActive) ->
+	kvs:put(#feizhai_target{id=1,feizhai_token=FZId,last_active=LastActive}).
 
 -spec calc_init_timeout(undefined|binary(),hibernate|calendar:datetime(),integer(),integer()) ->
 	{hibernate|integer(), undefined|calendar:datetime()}.
