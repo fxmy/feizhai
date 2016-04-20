@@ -17,19 +17,42 @@ snip() ->
 	F = fun() -> ok end,
 	kvs:add(#achieves{id = kvs:next_id(achieves,1), description = <<"wft诶嘿嘿"/utf8>>, times_needed = 3, validator = F}).
 
--spec new_feizhai() -> {integer(),binary(),binary(),calendar:datetime()}.
+% new face in town
+bump(#feizhai{id=undefined,prev=undefined,next=undefined}=FZ) ->
+	NewLA = calendar:universal_time(),
+	case kvs:get(feed, feizhai) of
+		{error,not_found} -> % first in town
+			kvs:add(FZ#feizhai{id=Id=kvs:next_id(feizhai,1),last_active=NewLA}),
+			wf:send(channel_reap,{lastFZchange, Id, NewLA});
+		{ok,_} ->
+			kvs:add(FZ#feizhai{id=kvs:next_id(feizhai,1),last_active=NewLA})
+	end,
+	NewLA;
+% old face
+bump(#feizhai{id=Id,prev=undefined,next=undefined}=FZ) ->
+	NewLA = calendar:universal_time(),
+	wf:send(channel_reap,{lastFZchange,Id,NewLA}),
+	kvs:remove(feizhai,Id),
+	kvs:add(FZ#feizhai{last_active=NewLA}),
+	NewLA;
+bump(#feizhai{id=Id,prev=undefined,next=Next}=FZ) ->
+	{ok,#feizhai{id=Next,last_active=NLA}} = kvs:get(feizhai,Next),
+	wf:send(channel_reap,{lastFZchange,Next,NLA}),
+	kvs:remove(feizhai,Id),
+	kvs:add(FZ#feizhai{last_active=NewLA=calendar:universal_time()}),
+	NewLA;
+bump(#feizhai{id=Id}=FZ) ->
+	kvs:remove(feizhai,Id),
+	kvs:add(FZ#feizhai{last_active=NewLA=calendar:universal_time()}),
+	NewLA.
+
+-spec new_feizhai() -> {binary(),binary()}.
 new_feizhai() ->
 	PublicToken = new_token(10),
 	PrivateToken = new_token(10),
-	%LifeSpan = calendar:gregorian_seconds_to_datetime( calendar:datetime_to_gregorian_seconds( calendar:universal_time()) + wf:config(sample,feizhai_life, 864000)),
-	LastAct = calendar:universal_time(),
-	ID = kvs:next_id(feizhai, 1),
-	Feizhai = #feizhai{id=ID,public_token=PublicToken,private_token=PrivateToken,last_active=LastAct},
-	kvs:add(Feizhai),
-	{ID,PublicToken,PrivateToken,LastAct}.
+	{PublicToken,PrivateToken}.
 
 -spec new_token( pos_integer() ) -> binary().
 new_token(Bytes) ->
 	B64 = base64:encode(crypto:strong_rand_bytes(Bytes)),
 	binary:replace(B64, [<<"=">>,<<"/">>,<<"+">>], <<>>, [global]).
-
