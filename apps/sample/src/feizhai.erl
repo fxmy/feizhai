@@ -17,6 +17,18 @@ snip() ->
 	F = fun() -> ok end,
 	kvs:add(#achieves{id = kvs:next_id(achieves,1), description = <<"wft诶嘿嘿"/utf8>>, times_needed = 3, validator = F}).
 
+validate_cookie(PubToken,PriToken) when is_binary(PubToken) andalso is_binary(PriToken) ->
+	case kvs:index(feizhai, public_token, PubToken) of
+		[] ->
+			{error,not_found};
+		[FZ=#feizhai{public_token=PubToken,private_token=PriToken}] ->
+			{ok,FZ};
+		_ ->
+			{error,auth_fail}
+	end;
+validate_cookie(_PubToken,_PriToken) ->
+	{error,badarg}.
+
 % new face in town
 bump(#feizhai{id=undefined,prev=undefined,next=undefined}=FZ) ->
 	NewLA = calendar:universal_time(),
