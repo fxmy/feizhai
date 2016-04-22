@@ -149,7 +149,6 @@ handle_info({lastFZchange,NewLastId,NewLaAlDT}, #state{feizhai_id=_Last, trigger
 	wf:info(?MODULE, "got lastFZchange:~p, last active in ~p, timeout in ~ps", [NewLastId,NewLaAlDT, Timeout/1000]),
 	{noreply, #state{feizhai_id=NewLastId,triggerDT=calendar:gregorian_seconds_to_datetime(FutureSec)}, Timeout};
 handle_info(timeout, #state{feizhai_id=DeadFZId,triggerDT=_TriDT}) ->% time to reap the last one
-	wf:info(?MODULE, "got timeout when ~p died", [DeadFZId]),
 	Now = calendar:datetime_to_gregorian_seconds( calendar:universal_time()),
 	{LastIdAlive, LAliveDT, DeadFZs} =
 	decayed_feizhai_ids(DeadFZId, Now - wf:config(sample, feizhai_life, 5*60)),
@@ -158,7 +157,7 @@ handle_info(timeout, #state{feizhai_id=DeadFZId,triggerDT=_TriDT}) ->% time to r
 	{Timeout,TrigDT} = calc_init_timeout(LastIdAlive, LAliveDT,
 					    wf:config(sample, feizhai_life, 5*60),
 					    Now),
-	wf:info(?MODULE, "next timeout: ~p", [Timeout]),
+	wf:info(?MODULE, "got timeout when ~p died; next timeout-> ~p", [DeadFZId,Timeout]),
 	%update feizhai_target
 	update_fz_target(LastIdAlive, LAliveDT),
 	{noreply, #state{feizhai_id=LastIdAlive,triggerDT=TrigDT}, Timeout}.

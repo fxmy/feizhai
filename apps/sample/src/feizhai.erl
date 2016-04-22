@@ -17,6 +17,21 @@ snip() ->
 	F = fun() -> ok end,
 	kvs:add(#achieves{id = kvs:next_id(achieves,1), description = <<"wft诶嘿嘿"/utf8>>, times_needed = 3, validator = F}).
 
+activity(PubToken,PriToken) ->
+	case validate_cookie(PubToken,PriToken) of
+		{error,_Reason} ->
+			CookieConfig = wf:config(sample, cookie, open),
+			if
+				CookieConfig==open ->
+					{PuT,PrT}=feizhai:new_feizhai(),
+					bump(#feizhai{public_token=PuT,private_token=PrT});
+				true ->
+					{error, cookie_closed}
+			end;
+		{ok,FZ=#feizhai{}} ->
+			bump(FZ)
+	end.
+
 validate_cookie(PubToken,PriToken) when is_binary(PubToken) andalso is_binary(PriToken) ->
 	case kvs:index(feizhai, public_token, PubToken) of
 		[] ->
@@ -30,7 +45,7 @@ validate_cookie(_PubToken,_PriToken) ->
 	{error,badarg}.
 
 % new face in town
-bump(#feizhai{id=undefined,prev=undefined,next=undefined}=FZ) ->
+bump(#feizhai{id=undefined,prev=undefined,next=undefined,public_token=PuT,private_token=PrT}=FZ) ->
 	NewLA = calendar:universal_time(),
 	case kvs:get(feed, feizhai) of
 		{error,not_found} -> % first in town
@@ -39,24 +54,24 @@ bump(#feizhai{id=undefined,prev=undefined,next=undefined}=FZ) ->
 		{ok,_} ->
 			kvs:add(FZ#feizhai{id=kvs:next_id(feizhai,1),last_active=NewLA})
 	end,
-	NewLA;
+	{ok,{NewLA,PuT,PrT}};
 % old face
-bump(#feizhai{id=Id,prev=undefined,next=undefined}=FZ) ->
+bump(#feizhai{id=Id,prev=undefined,next=undefined,public_token=PuT,private_token=PrT}=FZ) ->
 	NewLA = calendar:universal_time(),
 	wf:send(channel_reap,{lastFZchange,Id,NewLA}),
 	kvs:remove(feizhai,Id),
 	kvs:add(FZ#feizhai{last_active=NewLA}),
-	NewLA;
-bump(#feizhai{id=Id,prev=undefined,next=Next}=FZ) ->
+	{ok,{NewLA,PuT,PrT}};
+bump(#feizhai{id=Id,prev=undefined,next=Next,public_token=PuT,private_token=PrT}=FZ) ->
 	{ok,#feizhai{id=Next,last_active=NLA}} = kvs:get(feizhai,Next),
 	wf:send(channel_reap,{lastFZchange,Next,NLA}),
 	kvs:remove(feizhai,Id),
 	kvs:add(FZ#feizhai{last_active=NewLA=calendar:universal_time()}),
-	NewLA;
-bump(#feizhai{id=Id}=FZ) ->
+	{ok,{NewLA,PuT,PrT}};
+bump(#feizhai{id=Id,public_token=PuT,private_token=PrT}=FZ) ->
 	kvs:remove(feizhai,Id),
 	kvs:add(FZ#feizhai{last_active=NewLA=calendar:universal_time()}),
-	NewLA.
+	{ok,{NewLA,PuT,PrT}}.
 
 -spec new_feizhai() -> {binary(),binary()}.
 new_feizhai() ->

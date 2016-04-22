@@ -2,24 +2,22 @@
 -compile([export_all]).
 -include_lib("sample/include/feizhai.hrl").
 
-go() ->
-	{ID, _PuTo, _PrTo, LADT} = feizhai:new_feizhai(),
-	feizhai_reaper:update_fz_target(ID,LADT),
+go(N) when is_integer(N) ->
 	[begin
 		 receive
 		 after 3000 ->
-			       feizhai:new_feizhai()
+					feizhai:activity(<<"fake">>,<<"fake">>)
 		 end
-	 end || _X <- lists:seq(1,5)].
+	 end || _X <- lists:seq(1,N)].
 
 notify() ->
-	[#feizhai{id=IdA,public_token=_PuTo,next=NextId} =A|_] = kvs:entries(kvs:get(feed, feizhai),feizhai, 100),
-	{ok, #feizhai{id=Id, last_active=La}} = kvs:get(feizhai, NextId),
-	wf:send(channel_reap,{lastFZchange, Id, La}),
-	io:format("========~n~p -> ~p~n=======~n",[IdA, Id]),
-
-	kvs:remove(feizhai, IdA),
-	kvs:add(A).
+	K = kvs:entries(kvs:get(feed, feizhai),feizhai, 100),
+	case K of
+		[] ->
+			skip;
+		[#feizhai{public_token=PuT,private_token=PrT}|_] ->
+			feizhai:activity(PuT,PrT)
+	end.
 
 secIndex() ->
 	kvs:add(#achieves{id=kvs:next_id("achieves",1), description= <<"the world!">>, times_needed= 5}),
