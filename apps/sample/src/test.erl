@@ -10,14 +10,14 @@ go(N) when is_integer(N) ->
 		 end
 	 end || _X <- lists:seq(1,N)].
 
-notify() ->
-	K = kvs:entries(kvs:get(feed, feizhai),feizhai, 100),
-	case K of
-		[] ->
-			skip;
-		[#feizhai{public_token=PuT,private_token=PrT}|_] ->
-			feizhai:activity(PuT,PrT)
-	end.
+%notify() ->
+%	K = kvs:entries(kvs:get(feed, feizhai),feizhai, 100),
+%	case K of
+%		[] ->
+%			skip;
+%		[#feizhai{public_token=PuT,private_hash=PrT}|_] ->
+%			feizhai:activity(PuT,PrT)
+%	end.
 
 secIndex() ->
 	kvs:add(#achieves{id=kvs:next_id("achieves",1), description= <<"the world!">>, times_needed= 5}),

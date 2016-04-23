@@ -4,7 +4,7 @@
 -include_lib("kvs/include/kvs.hrl").
 
 -type public_token() :: binary().
--type private_token() :: binary().
+-type private_hash() :: binary().
 -type lati() :: number(). %-90.0 .. 90.0.
 -type longti() :: number(). %-180.0 .. 180.0.
 -type times_needed() :: pos_integer().
@@ -15,7 +15,7 @@
 -record(feizhai, {?ITERATOR(feed, true),
 		%feizhai_id,
 		public_token :: public_token(),
-		private_token :: private_token(),
+		private_hash :: private_hash(),
 		last_active = {{1970,1,1},{0,0,0}} :: calendar:datetime(),
 		ach_progress_ids = [] % list of id to TABLE ach_progress
 		}).
