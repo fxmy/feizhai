@@ -16,6 +16,13 @@ infoWindowContent() ->
 	wf:to_list(wf:render(#blockquote{body= memes:rand(),style=["font-weight: bold; margin-bottom: 0px;"]})) ++ wf:to_list(wf:render(#panel{id=wf:state(infowindow)})).
 tmpidcmpac() -> lists:delete($-, wf:temp_id()).
 
+marker_with_info(Pos,Content) ->
+	"new google.maps.Marker({
+    position: {lat: "++wf:to_list(maps:get(<<"lat">>,Pos))++", lng: "++wf:to_list(maps:get(<<"lng">>,Pos))++"},
+    map: map,
+    title: '"++wf:to_list(Content)++"'
+  });".
+
 api_event(Func,Args,_Cx) ->
 	ApiName = wf:state(apiName),
 	if ApiName == Func->
