@@ -34,7 +34,7 @@ activity(PubToken,PriToken) ->
 			end;
 		{ok,FZ=#feizhai{}} ->
 			{ok,NewLA} = bump(FZ),
-			{setcookie, undefined, undefined, NewLA}
+			{setcookie, keep, keep, NewLA}
 	end.
 
 validate_cookie(PubToken,PriToken) when is_binary(PubToken) andalso is_binary(PriToken) ->
