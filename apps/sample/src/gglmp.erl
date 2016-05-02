@@ -78,8 +78,10 @@ if (navigator.geolocation) {
     // Browser doesn't support Geolocation
     hndlLctnErr(false, infoWindow, map.getCenter());
   }");
+event({client, {<<"timezone">>,TZ}}) -> wf:state(<<"timezone">>, TZ);
 event(init) ->
 	wf:wire("console.log('!!!event init!!!');"),
+	wf:wire("ws.send(enc(tuple(atom('client'), tuple(bin('timezone'), number(new Date().getTimezoneOffset())))));"),
 	wf:info(?MODULE,"~p-> init!~n",[self()]);
 event(terminate) ->
 	wf:info(?MODULE,"~p-> Terminate!~n",[self()]);
