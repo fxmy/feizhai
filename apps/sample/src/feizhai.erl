@@ -3,6 +3,7 @@
 %-export([metainfo/0]).
 
 -define(BCRYPT_WORKFACTOR, 4).
+-define(WORDS_LIMIT_BYTES, 140*3).
 
 -include_lib("sample/include/feizhai.hrl").
 -include_lib("kvs/include/metainfo.hrl").
@@ -112,3 +113,22 @@ verify_in_constant_time(X, Y) when is_list(X) and is_list(Y) ->
 verify_in_constant_time(X, Y) when is_binary(X) -> verify_in_constant_time(wf:to_list(X), Y);
 verify_in_constant_time(X, Y) when is_binary(Y) -> verify_in_constant_time(X, wf:to_list(Y));
 verify_in_constant_time(_X, _Y) -> false.
+
+words_limit(Binary) when is_binary(Binary) ->
+	words_limit(Binary, ?WORDS_LIMIT_BYTES).
+
+words_limit(Binary, Limit) when is_integer(Limit) ->
+	case byte_size(Binary) > Limit of
+		false ->
+			Binary;
+		true ->
+			NewBin = binary:part(Binary, {0,Limit}),
+			case unicode:characters_to_binary(NewBin) of
+				{error, _Decoded, _RestBin} ->
+					{error, illegal_encode};
+				{incomplete, Decoded, _RestBin} ->
+					<<Decoded/binary, "..."/utf8>>;
+				Decoded ->
+					<<Decoded/binary, "..."/utf8>>
+			end
+	end.
