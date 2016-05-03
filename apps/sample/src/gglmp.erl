@@ -44,6 +44,20 @@ event(newachieve) ->
 	if ServerTK==undefined orelse ClientTK==undefined ->
 		  wf:info(?MODULE, "Server or Client TK undefined~n",[]);
 	   ServerTK == ClientTK ->
+		   PubTK = case wf:cookie("pubtk") of
+				   {pubtk, Pub, _PathPub, _TTLPub} -> Pub;
+				   _ -> false
+			   end,
+		   PriTK = case wf:cookie("pritk") of
+				   {pritk, Pri, _PathPri, _TTLPri} -> Pri;
+				   _ -> false
+			   end,
+		   case feizhai:activity(PubTK,PriTK) of
+			   {error, cookie_closed} ->
+				   wf:wire(#alert{text="uccu no cookie ugly~"});
+			   {setcookie, keep, keep, NewLastActive} -> ok;
+			   {setcookie, NewPubTK, NewPriTK, NewLastActive} -> ok
+		   end,
 		   wf:info(?MODULE,"New Achieve:~p,~p,~p~n",[wf:q(wf:state(achieve)),ServerTK,ClientTK]),
 		   wf:state(validt, undefined),
 		   wf:state(validt_content, undefined);
