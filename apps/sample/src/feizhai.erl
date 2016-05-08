@@ -21,6 +21,52 @@ snip() ->
 	F = fun() -> ok end,
 	kvs:add(#achieves{id = kvs:next_id(achieves,1), description = <<"wft诶嘿嘿"/utf8>>, times_needed = 3, validator = F}).
 
+add_feizhai_property(PubToken,PriToken,ach_progress,Value) when is_binary(PubToken) andalso is_binary(PriToken) ->
+	case validate_cookie(PubToken,PriToken) of
+		{error, _Reason} -> ignore;
+		{ok, FZ=#feizhai{}} ->
+			add_feizhai_property(FZ,ach_progress,Value)
+	end;
+add_feizhai_property(PubToken,PriToken,nichijou,Value) when is_binary(PubToken) andalso is_binary(PriToken) ->
+	case validate_cookie(PubToken,PriToken) of
+		{error, _Reason} -> ignore;
+		{ok, FZ=#feizhai{}} ->
+			add_feizhai_property(FZ,nichijou,Value)
+	end;
+add_feizhai_property(_PubToken,_PriToken,_Field,_Value) when is_binary(_PubToken) andalso is_binary(_PriToken) ->
+	ignore.
+
+add_feizhai_property(ID,ach_progress,Value) when is_integer(ID) ->
+	case kvs:get(feizhai, ID) of
+		{error, not_found} -> ignore;
+		{ok, FZ=#feizhai{}} ->
+			add_feizhai_property(FZ,ach_progress,Value)
+	end;
+add_feizhai_property(ID,nichijou,Value) when is_integer(ID) ->
+	case kvs:get(feizhai, ID) of
+		{error, not_found} -> ignore;
+		{ok, FZ=#feizhai{}} ->
+			add_feizhai_property(FZ,nichijou,Value)
+	end;
+add_feizhai_property(FZ=#feizhai{ach_progress_ids=Old},ach_progress,Value) ->
+	kvs:put(FZ#feizhai{ach_progress_ids=[Value|Old]});
+add_feizhai_property(FZ=#feizhai{nichijou_ids=Old},nichijou,Value) ->
+	kvs:put(FZ#feizhai{nichijou_ids=[Value|Old]});
+add_feizhai_property(_FZ=#feizhai{},_Field,_Value) ->
+	ignore;
+add_feizhai_property(_ID,_Field,_Value) when is_integer(_ID) ->
+	ignore.
+
+add_nichijou(PubToken,PriToken,Content,Lat,Lng) when is_binary(PubToken),is_binary(PriToken),is_binary(Content),is_number(Lat),is_number(Lng) ->
+	case validate_cookie(PubToken,PriToken) of
+		{error,_Reason} -> ignore;
+		{ok, FZ=#feizhai{id=FZ_Id}} ->
+			kvs:add(#nichijou{id=NichijouID=kvs:next_id("nichijou",1),feed_id=nichijou,feizhai_id=FZ_Id,content=Content,lat=Lat,lng=Lng,created=calendar:universal_time()}),
+			add_feizhai_property(FZ,nichijou,NichijouID),
+			{ok,Geohash} = geohash:encode(Lat,Lng,12),
+			geocache:newentry(Geohash,{nichijou,NichijouID})
+	end.
+
 activity(PubToken,PriToken) ->
 	case validate_cookie(PubToken,PriToken) of
 		{error,_Reason} ->
