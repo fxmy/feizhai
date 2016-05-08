@@ -17,7 +17,8 @@
 		public_token :: public_token(),
 		private_hash :: private_hash(),
 		last_active = {{1970,1,1},{0,0,0}} :: calendar:datetime(),
-		ach_progress_ids = [] % list of id to TABLE ach_progress
+		ach_progress_ids = [], % list of id to TABLE ach_progress
+		nichijou_ids = []
 		}).
 -record(achieves, {?ITERATOR(feed, true),
 		%achieve_id,
@@ -34,5 +35,14 @@
 		achieve_id,
 		progre = {0, []} :: progre() % {times_done, [{{lati,longti}, geohash, time}] }
 			}).
+
+-record(nichijou, {?ITERATOR(feed, true),
+		   nichijou_id,
+		   feizhai_id,
+		   content,
+		   lat,
+		   lng,
+		   created
+		  }).
 
 -endif.
