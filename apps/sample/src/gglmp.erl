@@ -20,7 +20,7 @@ marker_with_info(Lat,Lng,Who,Content) ->
 	"new google.maps.Marker({
     position: {lat: "++wf:to_list(Lat)++", lng: "++wf:to_list(Lng)++"},
     map: map,
-    title: '"++wf:to_list(Who)++":\n"++wf:to_list(Content)++"'
+    title: '"++wf:to_list(Who)++":\\n"++wf:to_list(Content)++"'
   });".
 
 api_event(Func,Args,_Cx) ->
