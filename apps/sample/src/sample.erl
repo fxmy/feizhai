@@ -18,7 +18,11 @@ init([])   -> case cowboy:start_http(http,3,port(),env()) of
 	      io:format("~nJOIN~n"),
 	      sup().
 
-sup()    -> { ok, { { one_for_one, 5, 100 }, [ ?CHILD(antiipspam, antiipspam, worker, []), ?CHILD(feizhai_reaper_sup, feizhai_reaper_sup, supervisor, []) ] } }.
+sup()    -> { ok, { { one_for_one, 5, 100 },[
+				?CHILD(antiipspam, antiipspam, worker, []),
+				?CHILD(geocache, geocache, worker, []),
+				?CHILD(feizhai_reaper_sup, feizhai_reaper_sup, supervisor, [])
+				] } }.
 env()    -> [ { env, [ { dispatch, points() } ] } ].
 static() ->   { dir, "apps/sample/priv/static", mime() }.
 n2o()    ->   { dir, "deps/n2o/priv",           mime() }.
