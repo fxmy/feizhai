@@ -16,11 +16,11 @@ infoWindowContent() ->
 	wf:to_list(wf:render(#blockquote{body= memes:rand(),style=["font-weight: bold; margin-bottom: 0px;"]})) ++ wf:to_list(wf:render(#panel{id=wf:state(infowindow)})).
 tmpidcmpac() -> lists:delete($-, wf:temp_id()).
 
-marker_with_info(Pos,Content) ->
+marker_with_info(Lat,Lng,Who,Content) ->
 	"new google.maps.Marker({
-    position: {lat: "++wf:to_list(maps:get(<<"lat">>,Pos))++", lng: "++wf:to_list(maps:get(<<"lng">>,Pos))++"},
+    position: {lat: "++wf:to_list(Lat)++", lng: "++wf:to_list(Lng)++"},
     map: map,
-    title: '"++wf:to_list(Content)++"'
+    title: '"++wf:to_list(Who)++":\n"++wf:to_list(Content)++"'
   });".
 
 api_event(Func,Args,_Cx) ->
@@ -31,44 +31,60 @@ api_event(Func,Args,_Cx) ->
 		   wf:state(lat, maps:get(<<"lat">>, Pos)),
 		   wf:state(lng, maps:get(<<"lng">>, Pos)),
 		   wf:insert_bottom(wf:state(infowindow),#hidden{id=wf:state(validt),disabled=true,value=wf:pickle(wf:state(validt_content))}),
-		   wf:insert_bottom(wf:state(infowindow),#textbox{id=wf:state(achieve)}),
-		   wf:insert_bottom(wf:state(infowindow),#button{body= <<"成就get"/utf8>>,postback=newachieve,source=[wf:state(achieve),wf:state(validt)],class=["btn waves-effect waves-light"]});
+		   wf:insert_bottom(wf:state(infowindow),#textbox{id=wf:state(nichijou)}),
+		   wf:insert_bottom(wf:state(infowindow),#button{body= <<"成就get"/utf8>>,postback=nichijou,source=[wf:state(nichijou),wf:state(validt)],class=["btn waves-effect waves-light"]});
 	   true ->
 		   wf:info(?MODULE, "apiName mismatch, expect ~p, got ~p~n", [ApiName,Func]),
 		   wf:wire("console.log('uccu apiName mismatch, ugly');")
 	end.
 
-event(newachieve) ->
-	ServerTK = wf:state(validt_content),
-	ClientTK = wf:depickle(wf:q(wf:state(validt))),
-	if ServerTK==undefined orelse ClientTK==undefined ->
-		  wf:info(?MODULE, "Server or Client TK undefined~n",[]);
-	   ServerTK == ClientTK ->
-		   PubTK = case wf:cookie("pubtk") of
-				   {pubtk, Pub, _PathPub, _TTLPub} -> Pub;
-				   _ -> false
-			   end,
-		   PriTK = case wf:cookie("pritk") of
-				   {pritk, Pri, _PathPri, _TTLPri} -> Pri;
-				   _ -> false
-			   end,
-		   case feizhai:activity(PubTK,PriTK) of
-			   {error, cookie_closed} ->
-				   wf:wire(#alert{text="uccu no cookie ugly~"});
-			   {setcookie, keep, keep, NewLastActive} -> ok;
-			   {setcookie, NewPubTK, NewPriTK, NewLastActive} -> ok
-		   end,
-		   wf:info(?MODULE,"New Achieve:~p,~p,~p~n",[wf:q(wf:state(achieve)),ServerTK,ClientTK]),
-		   wf:state(validt, undefined),
-		   wf:state(validt_content, undefined);
-	   true ->
-		   wf:info(?MODULE, "ClientTK mismatch, expect ~p, got ~p~n", [ServerTK, ClientTK])
-	end;
+event(nichijou) ->
+	{IP,_Port} = wf:peer(?REQ),
+	case antiipspam:checkspam(IP) of
+		nospam ->
+			ServerTK = wf:state(validt_content),
+			ClientTK = wf:depickle(wf:q(wf:state(validt))),
+			Content = feizhai:words_limit(wf:q(wf:state(nichijou))),
+			if
+				ServerTK==undefined orelse ClientTK==undefined ->
+					wf:info(?MODULE, "Server or Client TK undefined~n",[]);
+				ServerTK == ClientTK ->
+					PubTK = case wf:cookie("pubtk") of
+						{pubtk, Pub, _PathPub, _TTLPub} -> Pub;
+						_ -> false
+					end,
+					PriTK = case wf:cookie("pritk") of
+						{pritk, Pri, _PathPri, _TTLPri} -> Pri;
+						_ -> false
+					end,
+					case feizhai:activity(PubTK,PriTK) of
+						{error, cookie_closed} ->
+							wf:wire(#alert{text="uccu no cookie ugly~"});
+						{setcookie, keep, keep, _NewLastActive} ->
+							wf:cookie("pubtk",wf:to_list(PubTK),"/",wf:config(sample,feizhai_life,5*60)),
+							wf:cookie("pritk",wf:to_list(PriTK),"/",wf:config(sample,feizhai_life,5*60)),
+							wf:wire(marker_with_info(wf:state(lat),wf:state(lng),PubTK,Content));
+						{setcookie, NewPubTK, NewPriTK, _NewLastActive} ->
+							wf:cookie("pubtk",wf:to_list(NewPubTK),"/",wf:config(sample,feizhai_life,5*60)),
+							wf:cookie("pritk",wf:to_list(NewPriTK),"/",wf:config(sample,feizhai_life,5*60)),
+							wf:wire(marker_with_info(wf:state(lat),wf:state(lng),NewPubTK,Content))
+					end,
+					wf:info(?MODULE,"New Achieve:~p,~p,~p~n",[wf:q(wf:state(nichijou)),ServerTK,ClientTK]);
+				true ->
+					wf:info(?MODULE, "ClientTK mismatch, expect ~p, got ~p~n", [ServerTK, ClientTK])
+			end;
+		spam ->
+			wf:wire(#alert{text="uccu drown in water ugly~"})
+	end,
+	antiipspam:newpost(IP),
+	wf:state(validt, undefined),
+	wf:state(validt_content, undefined);
+
 event(btn) ->
 	wf:wire("console.log('btn!');"),
 	wf:state(infowindow,tmpidcmpac()),
 	wf:state(apiName,tmpidcmpac()),
-	wf:state(achieve,tmpidcmpac()),
+	wf:state(nichijou,tmpidcmpac()),
 	wf:state(validt,tmpidcmpac()),
 	wf:state(validt_content,crypto:rand_bytes(4)),
 	wf:wire(#api{name=wf:state(apiName)}),
