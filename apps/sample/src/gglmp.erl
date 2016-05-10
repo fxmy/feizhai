@@ -16,6 +16,21 @@ infoWindowContent() ->
 	wf:to_list(wf:render(#blockquote{body= memes:rand(),style=["font-weight: bold; margin-bottom: 0px;"]})) ++ wf:to_list(wf:render(#panel{id=wf:state(infowindow)})).
 tmpidcmpac() -> lists:delete($-, wf:temp_id()).
 
+formatcookie(Name,Value,Opts) ->
+	Iolist = cow_cookie:setcookie(Name,Value,Opts),
+	"document.cookie='"++wf:to_list(wf:to_binary(Iolist))++"';".
+%%    Ugly Hack Alert!
+%% Usaully cookies are issued via request/response manner
+%% But we are not doing request/response here
+%% So wf:cookie/4 will not work
+%% All we got is websocket which already established
+%% So we fake server side cookie via wf:cookie/4
+%% And issue client side cookie via raw wf:wire/1
+setcookie(Name,Value) when is_binary(Name), is_binary(Value) ->
+	wf:cookie(wf:to_list(Name),wf:to_list(Value),"/",wf:config(sample,feizhai_life,5*60)),
+	wf:wire(formatcookie(Name,Value,[{max_age,wf:config(sample,feizhai_life,5*60)},{path,<<"/">>}])).
+
+
 marker_with_info(Lat,Lng,Who,Content) ->
 	"new google.maps.Marker({
     position: {lat: "++wf:to_list(Lat)++", lng: "++wf:to_list(Lng)++"},
@@ -49,24 +64,24 @@ event(nichijou) ->
 				ServerTK==undefined orelse ClientTK==undefined ->
 					wf:info(?MODULE, "Server or Client TK undefined~n",[]);
 				ServerTK == ClientTK ->
-					PubTK = case wf:cookie("pubtk") of
-						{pubtk, Pub, _PathPub, _TTLPub} -> Pub;
+					PubTKBin = case wf:cookie("pubtk") of
+						{"pubtk", Pub, _PathPub, _TTLPub} -> wf:to_binary(Pub);
 						_ -> false
 					end,
-					PriTK = case wf:cookie("pritk") of
-						{pritk, Pri, _PathPri, _TTLPri} -> Pri;
+					PriTKBin = case wf:cookie("pritk") of
+						{"pritk", Pri, _PathPri, _TTLPri} -> wf:to_binary(Pri);
 						_ -> false
 					end,
-					case feizhai:activity(PubTK,PriTK) of
+					case feizhai:activity(PubTKBin,PriTKBin) of
 						{error, cookie_closed} ->
 							wf:wire(#alert{text="uccu no cookie ugly~"});
 						{setcookie, keep, keep, _NewLastActive} ->
-							wf:cookie("pubtk",wf:to_list(PubTK),"/",wf:config(sample,feizhai_life,5*60)),
-							wf:cookie("pritk",wf:to_list(PriTK),"/",wf:config(sample,feizhai_life,5*60)),
-							wf:wire(marker_with_info(wf:state(lat),wf:state(lng),PubTK,Content));
+							setcookie(<<"pubtk">>,PubTKBin),
+							setcookie(<<"pritk">>,PriTKBin),
+							wf:wire(marker_with_info(wf:state(lat),wf:state(lng),PubTKBin,Content));
 						{setcookie, NewPubTK, NewPriTK, _NewLastActive} ->
-							wf:cookie("pubtk",wf:to_list(NewPubTK),"/",wf:config(sample,feizhai_life,5*60)),
-							wf:cookie("pritk",wf:to_list(NewPriTK),"/",wf:config(sample,feizhai_life,5*60)),
+							setcookie(<<"pubtk">>,NewPubTK),
+							setcookie(<<"pritk">>,NewPriTK),
 							wf:wire(marker_with_info(wf:state(lat),wf:state(lng),NewPubTK,Content))
 					end,
 					wf:info(?MODULE,"New Achieve:~p,~p,~p~n",[wf:q(wf:state(nichijou)),ServerTK,ClientTK]);
