@@ -27,9 +27,8 @@ formatcookie(Name,Value,Opts) ->
 %% So we fake server side cookie via wf:cookie/4
 %% And issue client side cookie via raw wf:wire/1
 setcookie(Name,Value) when is_binary(Name), is_binary(Value) ->
-	wf:cookie(wf:to_list(Name),wf:to_list(Value),"/",wf:config(sample,feizhai_life,5*60)),
+	wf:cookie(Name,Value,"/",wf:config(sample,feizhai_life,5*60)),
 	wf:wire(formatcookie(Name,Value,[{max_age,wf:config(sample,feizhai_life,5*60)},{path,<<"/">>}])).
-
 
 marker_with_info(Lat,Lng,Who,Content) ->
 	"new google.maps.Marker({
@@ -64,12 +63,12 @@ event(nichijou) ->
 				ServerTK==undefined orelse ClientTK==undefined ->
 					wf:info(?MODULE, "Server or Client TK undefined~n",[]);
 				ServerTK == ClientTK ->
-					PubTKBin = case wf:cookie("pubtk") of
-						{"pubtk", Pub, _PathPub, _TTLPub} -> wf:to_binary(Pub);
+					PubTKBin = case wf:cookie(<<"pubtk">>) of
+						{<<"pubtk">>, Pub, _PathPub, _TTLPub} -> Pub;
 						_ -> false
 					end,
-					PriTKBin = case wf:cookie("pritk") of
-						{"pritk", Pri, _PathPri, _TTLPri} -> wf:to_binary(Pri);
+					PriTKBin = case wf:cookie(<<"pritk">>) of
+						{<<"pritk">>, Pri, _PathPri, _TTLPri} -> Pri;
 						_ -> false
 					end,
 					case feizhai:activity(PubTKBin,PriTKBin) of
@@ -127,6 +126,15 @@ event({client, {<<"timezone">>,TZ}}) -> wf:state(<<"timezone">>, TZ);
 event(init) ->
 	wf:wire("console.log('!!!event init!!!');"),
 	wf:wire("ws.send(enc(tuple(atom('client'), tuple(bin('timezone'), number(new Date().getTimezoneOffset())))));"),
+	%% Save cookie from ?REQ to wf:cookie/2(local process dictionary) when new connection arrives
+	%% So there are 2  mechanisms of cookies in N2O:
+	%% 1) wf:cookie/2,4 tangles with process dictionary and only flushed to client in body/0
+	%% 2) wf:cookie_req/2 which bridges to cowboy_req:cookie/2 that only works in HTTP
+	%% Since we are in websocket, to make cookies sync, use *wf:cookie/2(process dictionary under the hood)* as indirect:
+	%% 1) Getting client cookie through below 2 LoC in event(init)
+	%% 2) Setting client cookie through setcookie/2
+	wf:cookie(<<"pubtk">>,wf:cookie_req(<<"pubtk">>,?REQ)),
+	wf:cookie(<<"pritk">>,wf:cookie_req(<<"pritk">>,?REQ)),
 	wf:info(?MODULE,"~p-> init!~n",[self()]);
 event(terminate) ->
 	wf:info(?MODULE,"~p-> Terminate!~n",[self()]);
