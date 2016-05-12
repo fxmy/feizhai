@@ -4,7 +4,17 @@
 -include_lib("nitro/include/nitro.hrl").
 
 main()    -> #dtl{file="gglmp",app=sample, bindings=[{authkey,authkey()}, {presentmap,presentmap()}, {initmapfunc,initmapfunc()},{body,body()}]}.
-body() -> [#panel{id=map},
+body() ->
+	PubToken = wf:cookie_req(<<"pubtk">>,?REQ), PriToken = wf:cookie_req(<<"pritk">>,?REQ),
+	case feizhai:validate_cookie(PubToken,PriToken) of
+		{error, _Reason} -> %% HTTP request with invalid cookie, we just ignore them
+			ignore;
+		{ok, FZ} -> %% valid feizhai here, first bump it, then issue new TTL
+			feizhai:bump(FZ),
+			wf:cookie("pubtk",wf:to_list(PubToken),"/",wf:config(sample,feizhai_life,5*60)),
+			wf:cookie("pritk",wf:to_list(PriToken),"/",wf:config(sample,feizhai_life,5*60))
+	end,
+	[#panel{id=map},
 	   #panel{class=["fixed-action-btn"],style=["bottom: 25px; right: 48px;"],body=[
 		#link{class=["btn-floating btn-large waves-effect waves-light red"],postback=btn,body=[
 			#i{class=["material-icons"],body=["add"]}]}
