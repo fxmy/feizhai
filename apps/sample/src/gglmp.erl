@@ -82,6 +82,7 @@ event(nichijou) ->
 		spam ->
 			wf:wire(#alert{text="uccu drown in water ugly~"})
 	end,
+	wf:wire("infoWindow.close();"),
 	antiipspam:newpost(IP),
 	wf:state(validt, undefined),
 	wf:state(validt_content, undefined);
@@ -95,7 +96,7 @@ event(btn) ->
 	wf:state(validt_content,crypto:rand_bytes(4)),
 	wf:wire(#api{name=wf:state(apiName)}),
 	wf:wire("var hndlLctnErr = new Function('a','b','c','b.setPosition(c);b.setContent(a ? \"Error: The Geolocation service failed.\" : \"Error: Your browser doesn`t support geolocation.\");');
-var infoWindow = new google.maps.InfoWindow({map: map});
+infoWindow = new google.maps.InfoWindow({map: map});
 if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(function(position) {
       var pos = {
@@ -106,6 +107,7 @@ if (navigator.geolocation) {
       infoWindow.setPosition(pos);
       infoWindow.setContent('"++infoWindowContent()++"');
       map.setCenter(pos);
+      map.setZoom(14);
       "++wf:state(apiName)++"(pos);
     }, function() {
       hndlLctnErr(true, infoWindow, map.getCenter());
