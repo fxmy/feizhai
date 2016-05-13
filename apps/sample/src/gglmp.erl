@@ -26,6 +26,14 @@ infoWindowContent() ->
 	wf:to_list(wf:render(#blockquote{body= memes:rand(),style=["font-weight: bold; margin-bottom: 0px;"]})) ++ wf:to_list(wf:render(#panel{id=wf:state(infowindow)})).
 tmpidcmpac() -> lists:delete($-, wf:temp_id()).
 
+localTime(UTC) ->
+	TimeZoneInMinutes = case wf:state(<<"timezone">>) of
+		A when is_integer(A) -> A;
+		_ -> 0
+	end,
+	Local = calendar:gregorian_seconds_to_datetime(calendar:datetime_to_gregorian_seconds(UTC)- TimeZoneInMinutes*60),
+	wf:to_list(cow_date:rfc2109(Local)).
+
 formatcookie(Name,Value,Opts) ->
 	Iolist = cow_cookie:setcookie(Name,Value,Opts),
 	"document.cookie='"++wf:to_list(wf:to_binary(Iolist))++"';".
@@ -40,11 +48,11 @@ setcookie(Name,Value) when is_binary(Name), is_binary(Value) ->
 	wf:cookie(Name,Value,"/",wf:config(sample,feizhai_life,5*60)),
 	wf:wire(formatcookie(Name,Value,[{max_age,wf:config(sample,feizhai_life,5*60)},{path,<<"/">>}])).
 
-marker_with_info(Lat,Lng,Who,Content) ->
+marker_with_info(Lat,Lng,Who,When,Content) ->
 	"new google.maps.Marker({
     position: {lat: "++wf:to_list(Lat)++", lng: "++wf:to_list(Lng)++"},
     map: map,
-    title: '"++wf:to_list(Who)++":\\n"++wf:to_list(Content)++"'
+    title: '"++wf:to_list(Who)++"\\n"++wf:to_list(localTime(When))++"\\n"++wf:to_list(Content)++"'
   });".
 
 api_event(Func,Args,_Cx) ->
@@ -84,14 +92,14 @@ event(nichijou) ->
 					case feizhai:activity(PubTKBin,PriTKBin) of
 						{error, cookie_closed} ->
 							wf:wire(#alert{text="uccu no cookie ugly~"});
-						{setcookie, keep, keep, _NewLastActive} ->
+						{setcookie, keep, keep, NewLastActive} ->
 							setcookie(<<"pubtk">>,PubTKBin),
 							setcookie(<<"pritk">>,PriTKBin),
-							wf:wire(marker_with_info(wf:state(lat),wf:state(lng),PubTKBin,Content));
-						{setcookie, NewPubTK, NewPriTK, _NewLastActive} ->
+							wf:wire(marker_with_info(wf:state(lat),wf:state(lng),PubTKBin,NewLastActive,Content));
+						{setcookie, NewPubTK, NewPriTK, NewLastActive} ->
 							setcookie(<<"pubtk">>,NewPubTK),
 							setcookie(<<"pritk">>,NewPriTK),
-							wf:wire(marker_with_info(wf:state(lat),wf:state(lng),NewPubTK,Content))
+							wf:wire(marker_with_info(wf:state(lat),wf:state(lng),NewPubTK,NewLastActive,Content))
 					end,
 					wf:info(?MODULE,"New Achieve:~p,~p,~p~n",[wf:q(wf:state(nichijou)),ServerTK,ClientTK]);
 				true ->
