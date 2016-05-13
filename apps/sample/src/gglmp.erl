@@ -19,6 +19,7 @@ body() ->
 		#link{class=["btn-floating btn-large waves-effect waves-light red"],postback=btn,body=[
 			#i{class=["material-icons"],body=["add"]}]}
               ]}].
+
 authkey() -> "AIzaSyAAbNcNrZoGgi8YMdZ98Z3UGPXxM8PsbBU".
 presentmap() -> "XiaoSuiGu".
 initmapfunc() -> "var map;function "++presentmap()++"() {map = new google.maps.Map(document.getElementById('map'),{center: {lat: 60.192059, lng: 24.945831},zoom: 12,mapTypeControl:false,fullscreenControl:true});}".
@@ -77,34 +78,7 @@ event(nichijou) ->
 			ServerTK = wf:state(validt_content),
 			ClientTK = wf:depickle(wf:q(wf:state(validt))),
 			Content = feizhai:words_limit(wf:q(wf:state(nichijou))),
-			if
-				ServerTK==undefined orelse ClientTK==undefined ->
-					wf:info(?MODULE, "Server or Client TK undefined~n",[]);
-				ServerTK == ClientTK ->
-					PubTKBin = case wf:cookie(<<"pubtk">>) of
-						{<<"pubtk">>, Pub, _PathPub, _TTLPub} -> Pub;
-						_ -> false
-					end,
-					PriTKBin = case wf:cookie(<<"pritk">>) of
-						{<<"pritk">>, Pri, _PathPri, _TTLPri} -> Pri;
-						_ -> false
-					end,
-					case feizhai:activity(PubTKBin,PriTKBin) of
-						{error, cookie_closed} ->
-							wf:wire(#alert{text="uccu no cookie ugly~"});
-						{setcookie, keep, keep, NewLastActive} ->
-							setcookie(<<"pubtk">>,PubTKBin),
-							setcookie(<<"pritk">>,PriTKBin),
-							wf:wire(marker_with_info(wf:state(lat),wf:state(lng),PubTKBin,NewLastActive,Content));
-						{setcookie, NewPubTK, NewPriTK, NewLastActive} ->
-							setcookie(<<"pubtk">>,NewPubTK),
-							setcookie(<<"pritk">>,NewPriTK),
-							wf:wire(marker_with_info(wf:state(lat),wf:state(lng),NewPubTK,NewLastActive,Content))
-					end,
-					wf:info(?MODULE,"New Achieve:~p,~p,~p~n",[wf:q(wf:state(nichijou)),ServerTK,ClientTK]);
-				true ->
-					wf:info(?MODULE, "ClientTK mismatch, expect ~p, got ~p~n", [ServerTK, ClientTK])
-			end;
+			handle_nichijou(ServerTK,ClientTK,Content);
 		spam ->
 			wf:wire(#alert{text="uccu drown in water ugly~"})
 	end,
@@ -157,3 +131,35 @@ event(init) ->
 event(terminate) ->
 	wf:info(?MODULE,"~p-> Terminate!~n",[self()]);
 event(Event) -> wf:info(?MODULE,"~p-> Unknown Event: ~p~n",[self(),Event]).
+
+handle_nichijou(_ServerTK,_ClientTK,<<>>) ->
+	ignore;
+handle_nichijou(ServerTK,ClientTK,Content) ->
+	if
+		ServerTK==undefined orelse ClientTK==undefined ->
+			wf:info(?MODULE, "Server or Client TK undefined~n",[]);
+		ServerTK == ClientTK ->
+			PubTKBin = case wf:cookie(<<"pubtk">>) of
+				{<<"pubtk">>, Pub, _PathPub, _TTLPub} -> Pub;
+				_ -> false
+			end,
+			PriTKBin = case wf:cookie(<<"pritk">>) of
+				{<<"pritk">>, Pri, _PathPri, _TTLPri} -> Pri;
+				_ -> false
+			end,
+			case feizhai:activity(PubTKBin,PriTKBin) of
+				{error, cookie_closed} ->
+					wf:wire(#alert{text="uccu no cookie ugly~"});
+				{setcookie, keep, keep, NewLastActive} ->
+					setcookie(<<"pubtk">>,PubTKBin),
+					setcookie(<<"pritk">>,PriTKBin),
+					wf:wire(marker_with_info(wf:state(lat),wf:state(lng),PubTKBin,NewLastActive,Content));
+				{setcookie, NewPubTK, NewPriTK, NewLastActive} ->
+					setcookie(<<"pubtk">>,NewPubTK),
+					setcookie(<<"pritk">>,NewPriTK),
+					wf:wire(marker_with_info(wf:state(lat),wf:state(lng),NewPubTK,NewLastActive,Content))
+			end,
+			wf:info(?MODULE,"New Achieve:~p,~p,~p~n",[wf:q(wf:state(nichijou)),ServerTK,ClientTK]);
+		true ->
+			wf:info(?MODULE, "ClientTK mismatch, expect ~p, got ~p~n", [ServerTK, ClientTK])
+	end.
