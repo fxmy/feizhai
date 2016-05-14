@@ -22,7 +22,7 @@ body() ->
 
 authkey() -> "AIzaSyAAbNcNrZoGgi8YMdZ98Z3UGPXxM8PsbBU".
 presentmap() -> "XiaoSuiGu".
-initmapfunc() -> "var map;function "++presentmap()++"() {map = new google.maps.Map(document.getElementById('map'),{center: {lat: "++wf:to_list(rand:uniform()*180-90)++", lng: "++wf:to_list(rand:uniform()*360-180)++"},zoom: 12,mapTypeControl:false,fullscreenControl:true});}".
+initmapfunc() -> "var map;function "++presentmap()++"() {map = new google.maps.Map(document.getElementById('map'),{zoom: 15,mapTypeControl:false,fullscreenControl:true}); var xhr = new XMLHttpRequest(); xhr.open(\"POST\", \"https://www.googleapis.com/geolocation/v1/geolocate?key="++authkey()++"\", true); xhr.setRequestHeader(\"Content-type\", \"application/json\"); xhr.onreadystatechange = function () { if (xhr.readyState == 4 && xhr.status == 200) { map.setCenter(JSON.parse(xhr.responseText).location); } else {} }; xhr.send(\"{}\"); }".
 infoWindowContent() ->
 	wf:to_list(wf:render(#blockquote{body= memes:rand(),style=["font-weight: bold; margin-bottom: 0px;"]})) ++ wf:to_list(wf:render(#panel{id=wf:state(infowindow)})).
 tmpidcmpac() -> lists:delete($-, wf:temp_id()).
@@ -107,7 +107,7 @@ if (navigator.geolocation) {
       infoWindow.setPosition(pos);
       infoWindow.setContent('"++infoWindowContent()++"');
       map.setCenter(pos);
-      map.setZoom(14);
+      map.setZoom(16);
       "++wf:state(apiName)++"(pos);
     }, function() {
       hndlLctnErr(true, infoWindow, map.getCenter());
