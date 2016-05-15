@@ -82,6 +82,12 @@ event(nichijou) ->
 		spam ->
 			wf:wire(#alert{text="uccu drown in water ugly~"})
 	end,
+	wf:wire("ws.send(enc(tuple(atom('client'),tuple(
+		bin('bounds_changed'),
+		bin(JSON.stringify(map.getCenter().toJSON())),
+		bin(JSON.stringify(map.getBounds().toJSON())),
+		number(map.getZoom())
+	       ))));"),
 	wf:wire("infoWindow.close();"),
 	antiipspam:newpost(IP),
 	wf:state(validt, undefined),
@@ -117,6 +123,24 @@ if (navigator.geolocation) {
     hndlLctnErr(false, infoWindow, map.getCenter());
   }");
 event({client, {<<"timezone">>,TZ}}) -> wf:state(<<"timezone">>, TZ);
+%% highest useful geohash percision is 23 due to double percision issues; Zoom : 3-21
+event({client, {<<"bounds_changed">>,Center,Bounds,Zoom}}) -> 
+	wf:info(?MODULE,"bounds: ~p,~p,~p",[Center,Bounds,Zoom]);
+%% TODO figure out geohash:nearby/3;
+%% var rectangle = new google.maps.Rectangle({
+%% strokeColor: '#FF0000',
+%% strokeOpacity: 0.8,
+%% strokeWeight: 2,
+%% fillColor: '#FF0000',
+%% fillOpacity: 0.35,
+%% map: map,
+%% bounds: {
+%%   north: 33.685,
+%%   south: 33.671,
+%%   east: -116.234,
+%%   west: -116.251
+%%       }
+%%         });
 event(init) ->
 	wf:wire("console.log('!!!event init!!!');"),
 	wf:wire("ws.send(enc(tuple(atom('client'), tuple(bin('timezone'), number(new Date().getTimezoneOffset())))));"),
