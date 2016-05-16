@@ -124,8 +124,16 @@ if (navigator.geolocation) {
   }");
 event({client, {<<"timezone">>,TZ}}) -> wf:state(<<"timezone">>, TZ);
 %% highest useful geohash percision is 23 due to double percision issues; Zoom : 3-21
-event({client, {<<"bounds_changed">>,Center,Bounds,Zoom}}) -> 
-	wf:info(?MODULE,"bounds: ~p,~p,~p",[Center,Bounds,Zoom]);
+event({client, {<<"bounds_changed">>,Center,Bounds,Zoom}}) ->
+	C = jsone:decode(wf:to_binary(Center),[{object_format, map}]),
+	B = jsone:decode(wf:to_binary(Bounds),[{object_format, map}]),
+	HashList = geohash:nearby(maps:get(<<"lat">>,C),maps:get(<<"lng">>,C), 0.2),
+	[wf:wire("new google.maps.Rectangle({strokeColor: '#FF0000',strokeOpacity: 0.8,strokeWeight: 2,fillColor: '#FF0000',fillOpacity: 0.35,map: map,bounds: {north: "++wf:to_list(N)++",south: "++wf:to_list(S)++",east: "++wf:to_list(E)++",west: "++wf:to_list(W)++"}});") ||{ok,{{S,N},{W,E}}} <- [geohash:decode_bbox(X)||X<-HashList]],
+	%%{ok,H} = geohash:encode(maps:get(<<"lat">>,C),maps:get(<<"lng">>,C),23),
+	%%H1 = binary:part(H,{0,7}),
+	%%{ok,{{S,N},{W,E}}}  = geohash:decode_bbox(H1),
+	%%wf:wire("new google.maps.Rectangle({strokeColor: '#FF0000',strokeOpacity: 0.8,strokeWeight: 2,fillColor: '#00FF00',fillOpacity: 0.35,map: map,bounds: {north: "++wf:to_list(N)++",south: "++wf:to_list(S)++",east: "++wf:to_list(E)++",west: "++wf:to_list(W)++"}});"),
+	wf:info(?MODULE,"bounds: ~p,~p,~p",[C,B,Zoom]);
 %% TODO figure out geohash:nearby/3;
 %% var rectangle = new google.maps.Rectangle({
 %% strokeColor: '#FF0000',
