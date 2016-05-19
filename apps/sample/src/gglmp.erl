@@ -22,7 +22,7 @@ body() ->
 
 authkey() -> "AIzaSyAAbNcNrZoGgi8YMdZ98Z3UGPXxM8PsbBU".
 presentmap() -> "XiaoSuiGu".
-initmapfunc() -> "var map;function "++presentmap()++"() {map = new google.maps.Map(document.getElementById('map'),{zoom: 15,mapTypeControl:false,fullscreenControl:true}); var xhr = new XMLHttpRequest(); xhr.open(\"POST\", \"https://www.googleapis.com/geolocation/v1/geolocate?key="++authkey()++"\", true); xhr.setRequestHeader(\"Content-type\", \"application/json\"); xhr.onreadystatechange = function () { if (xhr.readyState == 4 && xhr.status == 200) { map.setCenter(JSON.parse(xhr.responseText).location); } else {} }; xhr.send(\"{}\"); }".
+initmapfunc() -> "var map;function "++presentmap()++"() {map = new google.maps.Map(document.getElementById('map'),{zoom: 15,mapTypeControl:false,fullscreenControl:true}); var xhr = new XMLHttpRequest(); xhr.open(\"POST\", \"https://www.googleapis.com/geolocation/v1/geolocate?key="++authkey()++"\", true); xhr.setRequestHeader(\"Content-type\", \"application/json\"); xhr.onreadystatechange = function () { if (xhr.readyState == 4 && xhr.status == 200) { map.setCenter(JSON.parse(xhr.responseText).location); } else {} }; xhr.send(\"{}\"); map.addListener('idle', function() { ws.send(enc(tuple(atom('client'),tuple(bin('idle'),bin(JSON.stringify(map.getCenter().toJSON())),bin(JSON.stringify(map.getBounds().toJSON())),number(map.getZoom())))));});}".
 infoWindowContent() ->
 	wf:to_list(wf:render(#blockquote{body= memes:rand(),style=["font-weight: bold; margin-bottom: 0px;"]})) ++ wf:to_list(wf:render(#panel{id=wf:state(infowindow)})).
 tmpidcmpac() -> lists:delete($-, wf:temp_id()).
@@ -82,12 +82,6 @@ event(nichijou) ->
 		spam ->
 			wf:wire(#alert{text="uccu drown in water ugly~"})
 	end,
-	wf:wire("ws.send(enc(tuple(atom('client'),tuple(
-		bin('bounds_changed'),
-		bin(JSON.stringify(map.getCenter().toJSON())),
-		bin(JSON.stringify(map.getBounds().toJSON())),
-		number(map.getZoom())
-	       ))));"),
 	wf:wire("infoWindow.close();"),
 	antiipspam:newpost(IP),
 	wf:state(validt, undefined),
@@ -123,32 +117,15 @@ if (navigator.geolocation) {
     hndlLctnErr(false, infoWindow, map.getCenter());
   }");
 event({client, {<<"timezone">>,TZ}}) -> wf:state(<<"timezone">>, TZ);
-%% highest useful geohash percision is 23 due to double percision issues; Zoom : 3-21
-event({client, {<<"bounds_changed">>,Center,Bounds,Zoom}}) ->
+%% highest useful geohash percision is 23 due to double percision issues; Zoom : 1-21
+event({client, {<<"idle">>,Center,Bounds,Zoom}}) ->
 	C = jsone:decode(wf:to_binary(Center),[{object_format, map}]),
 	B = jsone:decode(wf:to_binary(Bounds),[{object_format, map}]),
-	HashList = geohash:nearby(maps:get(<<"lat">>,C),maps:get(<<"lng">>,C), 0.2),
+	Radius = 55.5*0.4*min( abs(maps:get(<<"north">>,B)-maps:get(<<"south">>,B)), abs(maps:get(<<"east">>,B)-maps:get(<<"west">>,B)) ),
+	wf:info(?MODULE,"Radius: ~p",[Radius]),
+	HashList = geohash:nearby(maps:get(<<"lat">>,C),maps:get(<<"lng">>,C), Radius),
 	[wf:wire("new google.maps.Rectangle({strokeColor: '#FF0000',strokeOpacity: 0.8,strokeWeight: 2,fillColor: '#FF0000',fillOpacity: 0.35,map: map,bounds: {north: "++wf:to_list(N)++",south: "++wf:to_list(S)++",east: "++wf:to_list(E)++",west: "++wf:to_list(W)++"}});") ||{ok,{{S,N},{W,E}}} <- [geohash:decode_bbox(X)||X<-HashList]],
-	%%{ok,H} = geohash:encode(maps:get(<<"lat">>,C),maps:get(<<"lng">>,C),23),
-	%%H1 = binary:part(H,{0,7}),
-	%%{ok,{{S,N},{W,E}}}  = geohash:decode_bbox(H1),
-	%%wf:wire("new google.maps.Rectangle({strokeColor: '#FF0000',strokeOpacity: 0.8,strokeWeight: 2,fillColor: '#00FF00',fillOpacity: 0.35,map: map,bounds: {north: "++wf:to_list(N)++",south: "++wf:to_list(S)++",east: "++wf:to_list(E)++",west: "++wf:to_list(W)++"}});"),
 	wf:info(?MODULE,"bounds: ~p,~p,~p",[C,B,Zoom]);
-%% TODO figure out geohash:nearby/3;
-%% var rectangle = new google.maps.Rectangle({
-%% strokeColor: '#FF0000',
-%% strokeOpacity: 0.8,
-%% strokeWeight: 2,
-%% fillColor: '#FF0000',
-%% fillOpacity: 0.35,
-%% map: map,
-%% bounds: {
-%%   north: 33.685,
-%%   south: 33.671,
-%%   east: -116.234,
-%%   west: -116.251
-%%       }
-%%         });
 event(init) ->
 	wf:wire("console.log('!!!event init!!!');"),
 	wf:wire("ws.send(enc(tuple(atom('client'), tuple(bin('timezone'), number(new Date().getTimezoneOffset())))));"),
@@ -161,6 +138,13 @@ event(init) ->
 	%% 2) Setting client cookie through setcookie/2
 	wf:cookie(<<"pubtk">>,wf:cookie_req(<<"pubtk">>,?REQ)),
 	wf:cookie(<<"pritk">>,wf:cookie_req(<<"pritk">>,?REQ)),
+%	wf:wire("map.addListener('idle', function() { ws.send(enc(tuple(atom('client'),tuple(
+%		bin('idle'),
+%		bin(JSON.stringify(map.getCenter().toJSON())),
+%		bin(JSON.stringify(map.getBounds().toJSON())),
+%		number(map.getZoom())
+%	       ))));
+%		});"),
 	wf:info(?MODULE,"~p-> init!~n",[self()]);
 event(terminate) ->
 	wf:info(?MODULE,"~p-> Terminate!~n",[self()]);
