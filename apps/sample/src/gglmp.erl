@@ -124,8 +124,8 @@ event({client, {<<"idle">>,Center,Bounds,Zoom}}) ->
 	Radius = 55.5*0.4*min( abs(maps:get(<<"north">>,B)-maps:get(<<"south">>,B)), abs(maps:get(<<"east">>,B)-maps:get(<<"west">>,B)) ),
 	wf:info(?MODULE,"Radius: ~p",[Radius]),
 	HashList = geohash:nearby(maps:get(<<"lat">>,C),maps:get(<<"lng">>,C), Radius),
-	[wf:wire("new google.maps.Rectangle({strokeColor: '#FF0000',strokeOpacity: 0.8,strokeWeight: 2,fillColor: '#FF0000',fillOpacity: 0.35,map: map,bounds: {north: "++wf:to_list(N)++",south: "++wf:to_list(S)++",east: "++wf:to_list(E)++",west: "++wf:to_list(W)++"}});") ||{ok,{{S,N},{W,E}}} <- [geohash:decode_bbox(X)||X<-HashList]],
-	wf:info(?MODULE,"bounds: ~p,~p,~p",[C,B,Zoom]);
+	IDsPropList = lists:flatten(lists:filtermap(fun deduplicatetest/1, HashList)),
+	[wf:wire("new google.maps.Rectangle({strokeColor: '#FF0000',strokeOpacity: 0.8,strokeWeight: 2,fillColor: '#FF0000',fillOpacity: 0.35,map: map,bounds: {north: "++wf:to_list(N)++",south: "++wf:to_list(S)++",east: "++wf:to_list(E)++",west: "++wf:to_list(W)++"}});") ||{ok,{{S,N},{W,E}}} <- [geohash:decode_bbox(X)||X<-IDsPropList]];
 event(init) ->
 	wf:wire("console.log('!!!event init!!!');"),
 	wf:wire("ws.send(enc(tuple(atom('client'), tuple(bin('timezone'), number(new Date().getTimezoneOffset())))));"),
@@ -145,6 +145,7 @@ event(init) ->
 %		number(map.getZoom())
 %	       ))));
 %		});"),
+	wf:state(geohashtrie,trie:new()),
 	wf:info(?MODULE,"~p-> init!~n",[self()]);
 event(terminate) ->
 	wf:info(?MODULE,"~p-> Terminate!~n",[self()]);
@@ -180,4 +181,26 @@ handle_nichijou(ServerTK,ClientTK,Content) ->
 			wf:info(?MODULE,"New Achieve:~p,~p,~p~n",[wf:q(wf:state(nichijou)),ServerTK,ClientTK]);
 		true ->
 			wf:info(?MODULE, "ClientTK mismatch, expect ~p, got ~p~n", [ServerTK, ClientTK])
+	end.
+
+deduplicate(GeoHash) when is_binary(GeoHash) ->
+	Trie = wf:state(geohashtrie),
+	case trie:is_prefixed(binary_to_list(GeoHash),Trie) of
+		true ->
+			false;
+		false ->
+			wf:state(geohashtrie, trie:store(binary_to_list(GeoHash), Trie)),
+			All = geocache:getentry(GeoHash),
+			Duplicated = trie:fold_match(binary_to_list(GeoHash)++"*", fun geocache:gether/3, [], Trie),
+			{true,[{K,V}||{K,V}<-All, proplists:lookup(K,Duplicated) == none]}
+	end.
+
+deduplicatetest(GeoHash) when is_binary(GeoHash) ->
+	Trie = wf:state(geohashtrie),
+	case trie:is_prefixed(binary_to_list(GeoHash),Trie) of
+		true ->
+			false;
+		false ->
+			wf:state(geohashtrie, trie:store(binary_to_list(GeoHash), Trie)),
+			true
 	end.
