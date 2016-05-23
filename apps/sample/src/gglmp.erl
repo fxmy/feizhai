@@ -125,6 +125,8 @@ event({client, {<<"idle">>,Center,Bounds,Zoom}}) ->
 	wf:info(?MODULE,"Radius: ~p",[Radius]),
 	HashList = geohash:nearby(maps:get(<<"lat">>,C),maps:get(<<"lng">>,C), Radius),
 	IDsPropList = lists:flatten(lists:filtermap(fun deduplicatetest/1, HashList)),
+	GeoCaches = lists:flatten(lists:filtermap(fun deduplicate/1, HashList)),
+	wf:info(?MODULE,"T: ~p,~p",[GeoCaches,HashList]),
 	[wf:wire("new google.maps.Rectangle({strokeColor: '#FF0000',strokeOpacity: 0.8,strokeWeight: 2,fillColor: '#FF0000',fillOpacity: 0.35,map: map,bounds: {north: "++wf:to_list(N)++",south: "++wf:to_list(S)++",east: "++wf:to_list(E)++",west: "++wf:to_list(W)++"}});") ||{ok,{{S,N},{W,E}}} <- [geohash:decode_bbox(X)||X<-IDsPropList]];
 event(init) ->
 	wf:wire("console.log('!!!event init!!!');"),
@@ -138,13 +140,6 @@ event(init) ->
 	%% 2) Setting client cookie through setcookie/2
 	wf:cookie(<<"pubtk">>,wf:cookie_req(<<"pubtk">>,?REQ)),
 	wf:cookie(<<"pritk">>,wf:cookie_req(<<"pritk">>,?REQ)),
-%	wf:wire("map.addListener('idle', function() { ws.send(enc(tuple(atom('client'),tuple(
-%		bin('idle'),
-%		bin(JSON.stringify(map.getCenter().toJSON())),
-%		bin(JSON.stringify(map.getBounds().toJSON())),
-%		number(map.getZoom())
-%	       ))));
-%		});"),
 	wf:state(geohashtrie,trie:new()),
 	wf:info(?MODULE,"~p-> init!~n",[self()]);
 event(terminate) ->
@@ -192,7 +187,7 @@ deduplicate(GeoHash) when is_binary(GeoHash) ->
 			wf:state(geohashtrie, trie:store(binary_to_list(GeoHash), Trie)),
 			All = geocache:getentry(GeoHash),
 			Duplicated = trie:fold_match(binary_to_list(GeoHash)++"*", fun geocache:gether/3, [], Trie),
-			{true,[{K,V}||{K,V}<-All, proplists:lookup(K,Duplicated) == none]}
+			{true,[{K,V}||{K,V}<-All, []==[X||X<-proplists:get_keys(Duplicated),lists:prefix(X,K)]]}
 	end.
 
 deduplicatetest(GeoHash) when is_binary(GeoHash) ->
@@ -201,6 +196,6 @@ deduplicatetest(GeoHash) when is_binary(GeoHash) ->
 		true ->
 			false;
 		false ->
-			wf:state(geohashtrie, trie:store(binary_to_list(GeoHash), Trie)),
+			%wf:state(geohashtrie, trie:store(binary_to_list(GeoHash), Trie)),
 			true
 	end.
