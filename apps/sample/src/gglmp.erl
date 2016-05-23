@@ -118,14 +118,17 @@ if (navigator.geolocation) {
   }");
 event({client, {<<"timezone">>,TZ}}) -> wf:state(<<"timezone">>, TZ);
 %% highest useful geohash percision is 23 due to double percision issues; Zoom : 1-21
-event({client, {<<"idle">>,Center,Bounds,Zoom}}) ->
+event({client, {<<"idle">>,Center,Bounds,_Zoom}}) ->
 	C = jsone:decode(wf:to_binary(Center),[{object_format, map}]),
 	B = jsone:decode(wf:to_binary(Bounds),[{object_format, map}]),
 	Radius = 55.5*0.4*min( abs(maps:get(<<"north">>,B)-maps:get(<<"south">>,B)), abs(maps:get(<<"east">>,B)-maps:get(<<"west">>,B)) ),
 	wf:info(?MODULE,"Radius: ~p",[Radius]),
 	HashList = geohash:nearby(maps:get(<<"lat">>,C),maps:get(<<"lng">>,C), Radius),
 	IDsPropList = lists:flatten(lists:filtermap(fun deduplicatetest/1, HashList)),
+	%% [{"ww5ymbn0qyk8",[{nichijou,2}]},{"ww5ymbn0pmss",[{nichijou,1}]}]
 	GeoCaches = lists:flatten(lists:filtermap(fun deduplicate/1, HashList)),
+	%% {{ok,{34.84866307117045,118.03468013182282}}, [{nichijou,1},{ach,2}]}
+	PosiPropIDs = [{geohash:decode(list_to_binary(HashL)),IDpropL}||{HashL,IDpropL}<-GeoCaches],
 	wf:info(?MODULE,"T: ~p,~p",[GeoCaches,HashList]),
 	[wf:wire("new google.maps.Rectangle({strokeColor: '#FF0000',strokeOpacity: 0.8,strokeWeight: 2,fillColor: '#FF0000',fillOpacity: 0.35,map: map,bounds: {north: "++wf:to_list(N)++",south: "++wf:to_list(S)++",east: "++wf:to_list(E)++",west: "++wf:to_list(W)++"}});") ||{ok,{{S,N},{W,E}}} <- [geohash:decode_bbox(X)||X<-IDsPropList]];
 event(init) ->
@@ -167,10 +170,12 @@ handle_nichijou(ServerTK,ClientTK,Content) ->
 				{setcookie, keep, keep, NewLastActive} ->
 					setcookie(<<"pubtk">>,PubTKBin),
 					setcookie(<<"pritk">>,PriTKBin),
+					feizhai:add_nichijou(PubTKBin,PriTKBin,Content,wf:state(lat),wf:state(lng)),
 					wf:wire(marker_with_info(wf:state(lat),wf:state(lng),PubTKBin,NewLastActive,Content));
 				{setcookie, NewPubTK, NewPriTK, NewLastActive} ->
 					setcookie(<<"pubtk">>,NewPubTK),
 					setcookie(<<"pritk">>,NewPriTK),
+					feizhai:add_nichijou(NewPubTK,NewPriTK,Content,wf:state(lat),wf:state(lng)),
 					wf:wire(marker_with_info(wf:state(lat),wf:state(lng),NewPubTK,NewLastActive,Content))
 			end,
 			wf:info(?MODULE,"New Achieve:~p,~p,~p~n",[wf:q(wf:state(nichijou)),ServerTK,ClientTK]);

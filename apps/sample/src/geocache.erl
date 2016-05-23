@@ -3,6 +3,7 @@
 -behaviour(gen_server).
 
 -include_lib("kvs/include/metainfo.hrl").
+-include_lib("sample/include/geocache.hrl").
 
 %% API functions
 -export([start_link/0, metainfo/0]).
@@ -17,7 +18,6 @@
 
 -compile([export_all]).
 
--record(geocache, {geohash, ach_progress_ids=[]}). %% { string(),[integer()] }
 
 %%%===================================================================
 %%% API functions
