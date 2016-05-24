@@ -1,12 +1,15 @@
 -module(memes).
 %-compile([export_all]).
--export([rand/0]).
+-export([rand/0,rand_kamoji/0]).
 
 rand() ->
 	Meme = element(rand:uniform(tuple_size(memes())), memes()),
-	Kaomoji = element(rand:uniform(tuple_size(kaomoji())), kaomoji()),
+	Kaomoji = rand_kamoji(),
 	<<Meme/binary,Kaomoji/binary>>.
 	%<<element(rand:uniform(tuple_size(memes())), memes()),element(rand:uniform(tuple_size(kaomoji())), kaomoji())>>.
+
+rand_kamoji() ->
+	element(rand:uniform(tuple_size(kaomoji())), kaomoji()).
 
 memes() ->
 	{<<"这是芦苇"/utf8>>,

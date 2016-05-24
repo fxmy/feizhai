@@ -2,6 +2,7 @@
 -compile(export_all).
 -include_lib("n2o/include/wf.hrl").
 -include_lib("nitro/include/nitro.hrl").
+-include_lib("sample/include/feizhai.hrl").
 
 main()    -> #dtl{file="gglmp",app=sample, bindings=[{authkey,authkey()}, {presentmap,presentmap()}, {initmapfunc,initmapfunc()},{body,body()}]}.
 body() ->
@@ -122,15 +123,15 @@ event({client, {<<"idle">>,Center,Bounds,_Zoom}}) ->
 	C = jsone:decode(wf:to_binary(Center),[{object_format, map}]),
 	B = jsone:decode(wf:to_binary(Bounds),[{object_format, map}]),
 	Radius = 55.5*0.4*min( abs(maps:get(<<"north">>,B)-maps:get(<<"south">>,B)), abs(maps:get(<<"east">>,B)-maps:get(<<"west">>,B)) ),
-	wf:info(?MODULE,"Radius: ~p",[Radius]),
 	HashList = geohash:nearby(maps:get(<<"lat">>,C),maps:get(<<"lng">>,C), Radius),
-	IDsPropList = lists:flatten(lists:filtermap(fun deduplicatetest/1, HashList)),
+	%% IDsPropList = lists:flatten(lists:filtermap(fun deduplicatetest/1, HashList)),
 	%% [{"ww5ymbn0qyk8",[{nichijou,2}]},{"ww5ymbn0pmss",[{nichijou,1}]}]
 	GeoCaches = lists:flatten(lists:filtermap(fun deduplicate/1, HashList)),
-	%% {{ok,{34.84866307117045,118.03468013182282}}, [{nichijou,1},{ach,2}]}
-	PosiPropIDs = [{geohash:decode(list_to_binary(HashL)),IDpropL}||{HashL,IDpropL}<-GeoCaches],
-	wf:info(?MODULE,"T: ~p,~p",[GeoCaches,HashList]),
-	[wf:wire("new google.maps.Rectangle({strokeColor: '#FF0000',strokeOpacity: 0.8,strokeWeight: 2,fillColor: '#FF0000',fillOpacity: 0.35,map: map,bounds: {north: "++wf:to_list(N)++",south: "++wf:to_list(S)++",east: "++wf:to_list(E)++",west: "++wf:to_list(W)++"}});") ||{ok,{{S,N},{W,E}}} <- [geohash:decode_bbox(X)||X<-IDsPropList]];
+	%% [{34.848709339275956,118.0346586741507, [{nichijou,2},{ach,5}]},
+	%% {34.84866307117045,118.03468013182282,[{nichijou,1}]}]
+	PosiPropIDs = [begin {ok,{Lat,Lng}} = geohash:decode(list_to_binary(HashL)), {Lat,Lng,IDpropL} end||{HashL,IDpropL}<-GeoCaches],
+	lists:foreach(fun draw_markers/1, PosiPropIDs);
+	%% [wf:wire("new google.maps.Rectangle({strokeColor: '#FF0000',strokeOpacity: 0.8,strokeWeight: 2,fillColor: '#FF0000',fillOpacity: 0.35,map: map,bounds: {north: "++wf:to_list(N)++",south: "++wf:to_list(S)++",east: "++wf:to_list(E)++",west: "++wf:to_list(W)++"}});") ||{ok,{{S,N},{W,E}}} <- [geohash:decode_bbox(X)||X<-IDsPropList]];
 event(init) ->
 	wf:wire("console.log('!!!event init!!!');"),
 	wf:wire("ws.send(enc(tuple(atom('client'), tuple(bin('timezone'), number(new Date().getTimezoneOffset())))));"),
@@ -204,3 +205,17 @@ deduplicatetest(GeoHash) when is_binary(GeoHash) ->
 			%wf:state(geohashtrie, trie:store(binary_to_list(GeoHash), Trie)),
 			true
 	end.
+
+%% [{34.848709339275956,118.0346586741507, [{nichijou,2},{ach,5}]},
+draw_markers({Lat,Lng,PropIDs}) ->
+	[begin
+		 {ok,#nichijou{content=What,created=When,feizhai_id=FeiID}}=kvs:get(nichijou,NcjID),
+		 Who = case kvs:get(feizhai,FeiID) of
+			       {ok,#feizhai{public_token=PubTK}} ->
+				       PubTK;
+			       {error,_} ->
+				       Kamoji = memes:rand_kamoji(),
+				       <<"腐烂掉的肥宅"/utf8,Kamoji/binary>>
+		       end,
+		 wf:wire(marker_with_info(Lat,Lng,Who,When,What))
+	 end||{nichijou,NcjID}<-PropIDs].
