@@ -3,13 +3,13 @@
 -export([rand/0,rand_kamoji/0]).
 
 rand() ->
-	Meme = element(rand:uniform(tuple_size(memes())), memes()),
+	Meme = element(random:uniform(tuple_size(memes())), memes()),
 	Kaomoji = rand_kamoji(),
 	<<Meme/binary,Kaomoji/binary>>.
-	%<<element(rand:uniform(tuple_size(memes())), memes()),element(rand:uniform(tuple_size(kaomoji())), kaomoji())>>.
+	%<<element(random:uniform(tuple_size(memes())), memes()),element(rand:uniform(tuple_size(kaomoji())), kaomoji())>>.
 
 rand_kamoji() ->
-	element(rand:uniform(tuple_size(kaomoji())), kaomoji()).
+	element(random:uniform(tuple_size(kaomoji())), kaomoji()).
 
 memes() ->
 	{<<"这是芦苇"/utf8>>,
