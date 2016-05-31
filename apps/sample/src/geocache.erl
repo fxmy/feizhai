@@ -82,7 +82,8 @@ handle_call({getentry, Geohash}, _From, Trie) when is_binary(Geohash) ->
 			Res = mnesia:async_dirty(fun mnesia_geoprefix_get/1, [GeoList]),
 			NewTrie = lists:foldl(fun updatetrie/2,Trie,Res),
 			ProgIds = lists:umerge([lists:sort(X)||#geocache{ach_progress_ids=X} <- Res]),
-			{reply, lists:reverse(ProgIds), NewTrie};
+			Pairs = [{H,lists:reverse(lists:sort(X))} ||#geocache{geohash=H,ach_progress_ids=X} <- Res],
+			{reply, Pairs, NewTrie};
 		_ ->
 			{reply, Total, Trie}
 	end;
