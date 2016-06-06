@@ -19,9 +19,8 @@
   </head>
   <body>
   {{body}}
-    <!--div id="map"></div-->
     <script>{{initmapfunc}}</script>
-    <script src="https://maps.googleapis.com/maps/api/js?key={{ authkey }}&callback={{ presentmap }}" async defer></script>
+    <script src="http://api.map.baidu.com/api?v=2.0&ak={{ authkey }}&callback={{ presentmap }}" async defer></script>
 
     <script>{{script}}</script>
     <script type="text/javascript" src="https://code.jquery.com/jquery-2.1.1.min.js"></script>

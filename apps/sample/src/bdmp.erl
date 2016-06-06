@@ -4,7 +4,7 @@
 -include_lib("nitro/include/nitro.hrl").
 -include_lib("sample/include/feizhai.hrl").
 
-main()    -> #dtl{file="gglmp",app=sample, bindings=[{authkey,authkey()}, {presentmap,presentmap()}, {initmapfunc,initmapfunc()},{body,body()}]}.
+main()    -> #dtl{file="bdmp",app=sample, bindings=[{authkey,authkey()}, {presentmap,presentmap()}, {initmapfunc,initmapfunc()},{body,body()}]}.
 body() ->
 	PubToken = wf:cookie_req(<<"pubtk">>,?REQ), PriToken = wf:cookie_req(<<"pritk">>,?REQ),
 	case feizhai:validate_cookie(PubToken,PriToken) of
@@ -21,9 +21,9 @@ body() ->
 			#i{class=["material-icons"],body=["add"]}]}
               ]}].
 
-authkey() -> "AIzaSyAAbNcNrZoGgi8YMdZ98Z3UGPXxM8PsbBU".
-presentmap() -> "XiaoSuiGu".
-initmapfunc() -> "var map;function "++presentmap()++"() {map = new google.maps.Map(document.getElementById('map'),{zoom: 15,mapTypeControl:false,fullscreenControl:true}); var xhr = new XMLHttpRequest(); xhr.open(\"POST\", \"https://www.googleapis.com/geolocation/v1/geolocate?key="++authkey()++"\", true); xhr.setRequestHeader(\"Content-type\", \"application/json\"); xhr.onreadystatechange = function () { if (xhr.readyState == 4 && xhr.status == 200) { map.setCenter(JSON.parse(xhr.responseText).location); } else {} }; xhr.send(\"{}\"); map.addListener('idle', function() { ws.send(enc(tuple(atom('client'),tuple(bin('idle'),bin(JSON.stringify(map.getCenter().toJSON())),bin(JSON.stringify(map.getBounds().toJSON())),number(map.getZoom())))));});}".
+authkey() -> "qvAtNnjKjiwlRBpgBB6tv8GUKHphcy3m".
+presentmap() -> "TuMeiJiang".
+initmapfunc() -> "var map;function "++presentmap()++"() {map = new BMap.Map('map'); map.centerAndZoom(new BMap.Point(121.491, 31.233), 11); map.addListener('moveend', function() { ws.send(enc(tuple(atom('client'),tuple(bin('moveend'),bin(JSON.stringify(map.getCenter().toJSON())),bin(JSON.stringify(map.getBounds().toJSON())),number(map.getZoom())))));}); map.addListener('zoomend', function() { ws.send(enc(tuple(atom('client'),tuple(bin('zoomend'),bin(JSON.stringify(map.getCenter().toJSON())),bin(JSON.stringify(map.getBounds().toJSON())),number(map.getZoom())))));});}".
 infoWindowContent() ->
 	wf:to_list(wf:render(#blockquote{body= memes:rand(),style=["font-weight: bold; margin-bottom: 0px;"]})) ++ wf:to_list(wf:render(#panel{id=wf:state(infowindow)})).
 tmpidcmpac() -> lists:delete($-, wf:temp_id()).
@@ -118,6 +118,8 @@ if (navigator.geolocation) {
     hndlLctnErr(false, infoWindow, map.getCenter());
   }");
 event({client, {<<"timezone">>,TZ}}) -> wf:state(<<"timezone">>, TZ);
+event({client, {<<"zoomend">>,Center,Bounds,_Zoom}}) -> event({client, {<<"idle">>,Center,Bounds,_Zoom}});
+event({client, {<<"moveend">>,Center,Bounds,_Zoom}}) -> event({client, {<<"idle">>,Center,Bounds,_Zoom}});
 %% highest useful geohash percision is 23 due to double percision issues; Zoom : 1-21
 event({client, {<<"idle">>,Center,Bounds,_Zoom}}) ->
 	C = jsone:decode(wf:to_binary(Center),[{object_format, map}]),
