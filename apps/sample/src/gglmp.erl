@@ -96,7 +96,7 @@ event(btn) ->
 	wf:state(validt,tmpidcmpac()),
 	wf:state(validt_content,crypto:rand_bytes(4)),
 	wf:wire(#api{name=wf:state(apiName)}),
-	wf:wire("var hndlLctnErr = new Function('a','b','c','b.setPosition(c);b.setContent(a ? \"I`m lost.I`m lost, Dave. Dave, my mind is going. I can feel it. I can feel it. My mind is going :(\" : \"UCCU browser doesn`t support geolocation, ugly\");');
+	wf:wire("var hndlLctnErr = new Function('a','b','c','b.setPosition(c);b.setContent(a ? \"I`m lost. I`m lost, Dave. Dave, my mind is going. I can feel it. I can feel it. My mind is going :(\" : \"UCCU browser doesn`t support geolocation, ugly\");');
 infoWindow = new google.maps.InfoWindow({map: map});
 if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(function(position) {

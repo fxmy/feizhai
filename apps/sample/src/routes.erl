@@ -14,7 +14,7 @@ prefix(<<"/",P/binary>>)    -> route(P);
 prefix(P)                   -> route(P).
 
 route(<<>>)                 -> index;
-route(<<"">>)               -> bdmp;
+route(<<"bd">>)               -> bdmp;
 route(<<"ggl">>)	    -> gglmp;
 route(<<"new">>)            -> new_achieve;
 route(<<"index">>)          -> index;

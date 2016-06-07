@@ -23,7 +23,7 @@ body() ->
 
 authkey() -> "qvAtNnjKjiwlRBpgBB6tv8GUKHphcy3m".
 presentmap() -> "TuMeiJiang".
-initmapfunc() -> "var map;function "++presentmap()++"() {map = new BMap.Map('map'); map.centerAndZoom(new BMap.Point(121.491, 31.233), 11); map.addListener('moveend', function() { ws.send(enc(tuple(atom('client'),tuple(bin('moveend'),bin(JSON.stringify(map.getCenter().toJSON())),bin(JSON.stringify(map.getBounds().toJSON())),number(map.getZoom())))));}); map.addListener('zoomend', function() { ws.send(enc(tuple(atom('client'),tuple(bin('zoomend'),bin(JSON.stringify(map.getCenter().toJSON())),bin(JSON.stringify(map.getBounds().toJSON())),number(map.getZoom())))));});}".
+initmapfunc() -> "var map;function "++presentmap()++"() {map = new BMap.Map('map'); map.centerAndZoom(new BMap.Point(121.491, 31.233), 11); map.enableScrollWheelZoom(true); map.addEventListener('moveend', function() { ws.send(enc(tuple(atom('client'),tuple(bin('moveend'),bin(JSON.stringify(map.getCenter())),bin(JSON.stringify(map.getBounds().toJSON())),number(map.getZoom())))));}); map.addEventListener('zoomend', function() { ws.send(enc(tuple(atom('client'),tuple(bin('zoomend'),bin(JSON.stringify(map.getCenter())),bin(JSON.stringify(map.getBounds().toJSON())),number(map.getZoom())))));});}".
 infoWindowContent() ->
 	wf:to_list(wf:render(#blockquote{body= memes:rand(),style=["font-weight: bold; margin-bottom: 0px;"]})) ++ wf:to_list(wf:render(#panel{id=wf:state(infowindow)})).
 tmpidcmpac() -> lists:delete($-, wf:temp_id()).
@@ -51,11 +51,7 @@ setcookie(Name,Value) when is_binary(Name), is_binary(Value) ->
 	wf:wire(formatcookie(Name,Value,[{max_age,wf:config(sample,feizhai_life,5*60)},{path,<<"/">>}])).
 
 marker_with_info(Lat,Lng,Who,When,Content) ->
-	"new google.maps.Marker({
-    position: {lat: "++wf:to_list(Lat)++", lng: "++wf:to_list(Lng)++"},
-    map: map,
-    title: '"++wf:to_list(Who)++"\\n"++wf:to_list(localTime(When))++"\\n"++wf:to_list(Content)++"'
-  });".
+	"var marker =  new BMap.Marker({lat: "++wf:to_list(Lat)++", lng: "++wf:to_list(Lng)++"}, {title: '"++wf:to_list(Who)++"\\n"++wf:to_list(localTime(When))++"\\n"++wf:to_list(Content)++"' }); map.addOverlay(marker);".
 
 api_event(Func,Args,_Cx) ->
 	ApiName = wf:state(apiName),
@@ -96,8 +92,8 @@ event(btn) ->
 	wf:state(validt,tmpidcmpac()),
 	wf:state(validt_content,crypto:rand_bytes(4)),
 	wf:wire(#api{name=wf:state(apiName)}),
-	wf:wire("var hndlLctnErr = new Function('a','b','c','b.setPosition(c);b.setContent(a ? \"Error: The Geolocation service failed.\" : \"Error: Your browser doesn`t support geolocation.\");');
-infoWindow = new google.maps.InfoWindow({map: map});
+	wf:wire("var hndlLctnErr = new Function('a','b','c','map.openInfoWindow(b,c);b.setContent(a ? \"I`m lost. I`m lost, Dave. Dave, my mind is going. I can feel it. I can feel it. My mind is going. :(\" : \"UCCU browser doesn`t support geolocation, ugly.\");');
+infoWindow = new BMap.InfoWindow('');
 if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(function(position) {
       var pos = {
@@ -105,7 +101,9 @@ if (navigator.geolocation) {
         lng: position.coords.longitude
       };
 
-      infoWindow.setPosition(pos);
+      console.log(pos);
+
+      map.openInfoWindow(infoWindow,pos);
       infoWindow.setContent('"++infoWindowContent()++"');
       map.setCenter(pos);
       map.setZoom(16);
