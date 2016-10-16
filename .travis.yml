@@ -2,4 +2,4 @@ language: erlang
 otp_release:
         - 17.5
 install: "./mad deps"
-script: "./mad compile"
+script: "rebar compile"
