@@ -25,7 +25,11 @@ body() ->
 
 authkey() -> "qvAtNnjKjiwlRBpgBB6tv8GUKHphcy3m".
 presentmap() -> "TuMeiJiang".
-initmapfunc() -> "var map;function "++presentmap()++"() {map = new BMap.Map('map'); map.centerAndZoom(new BMap.Point(121.491, 31.233), 11); map.enableScrollWheelZoom(true); map.addEventListener('moveend', function() { ws.send(enc(tuple(atom('client'),tuple(bin('moveend'),bin(JSON.stringify(map.getCenter())),bin(JSON.stringify(({ 'east':map.getBounds().getNorthEast().lng, 'north':map.getBounds().getNorthEast().lat, 'west':map.getBounds().getSouthWest().lng, 'south':map.getBounds().getSouthWest().lat }))),number(map.getZoom())))));}); map.addEventListener('zoomend', function() { ws.send(enc(tuple(atom('client'),tuple(bin('zoomend'),bin(JSON.stringify(map.getCenter())),bin(JSON.stringify(({ 'east':map.getBounds().getNorthEast().lng, 'north':map.getBounds().getNorthEast().lat, 'west':map.getBounds().getSouthWest().lng, 'south':map.getBounds().getSouthWest().lat }))),number(map.getZoom())))));});};".
+initmapfunc() -> "var map;function "++presentmap()++"() {map = new BMap.Map('map'); map.centerAndZoom(new BMap.Point(121.491, 31.233), 11); map.enableScrollWheelZoom(true);
+                 map.addEventListener('moveend', function() { ws.send(enc(tuple(atom('client'),tuple(bin('moveend'),bin(JSON.stringify(map.getCenter())),bin(JSON.stringify(({ 'east':map.getBounds().getNorthEast().lng, 'north':map.getBounds().getNorthEast().lat, 'west':map.getBounds().getSouthWest().lng, 'south':map.getBounds().getSouthWest().lat }))),number(map.getZoom())))));});
+                 map.addEventListener('zoomend', function() { ws.send(enc(tuple(atom('client'),tuple(bin('zoomend'),bin(JSON.stringify(map.getCenter())),bin(JSON.stringify(({ 'east':map.getBounds().getNorthEast().lng, 'north':map.getBounds().getNorthEast().lat, 'west':map.getBounds().getSouthWest().lng, 'south':map.getBounds().getSouthWest().lat }))),number(map.getZoom())))));});
+                 function dis_local_map(result){ map.setCenter(result.name);};
+                 new BMap.LocalCity().get(dis_local_map);}; ".
 
 infoWindowContent() ->
   wf:to_list(wf:render(#blockquote{body= memes:rand(),
