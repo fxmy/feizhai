@@ -25,10 +25,13 @@ body() ->
 
 authkey() -> "qvAtNnjKjiwlRBpgBB6tv8GUKHphcy3m".
 presentmap() -> "TuMeiJiang".
-initmapfunc() -> "var map;function "++presentmap()++"() {map = new BMap.Map('map'); map.centerAndZoom(new BMap.Point(121.491, 31.233), 11); map.enableScrollWheelZoom(true);
+initmapfunc() -> "var map;
+                 var geolocation;
+                 function "++presentmap()++"() {map = new BMap.Map('map'); map.centerAndZoom(new BMap.Point(121.491, 31.233), 11); map.enableScrollWheelZoom(true);
                  map.addEventListener('moveend', function() { ws.send(enc(tuple(atom('client'),tuple(bin('moveend'),bin(JSON.stringify(map.getCenter())),bin(JSON.stringify(({ 'east':map.getBounds().getNorthEast().lng, 'north':map.getBounds().getNorthEast().lat, 'west':map.getBounds().getSouthWest().lng, 'south':map.getBounds().getSouthWest().lat }))),number(map.getZoom())))));});
                  map.addEventListener('zoomend', function() { ws.send(enc(tuple(atom('client'),tuple(bin('zoomend'),bin(JSON.stringify(map.getCenter())),bin(JSON.stringify(({ 'east':map.getBounds().getNorthEast().lng, 'north':map.getBounds().getNorthEast().lat, 'west':map.getBounds().getSouthWest().lng, 'south':map.getBounds().getSouthWest().lat }))),number(map.getZoom())))));});
-                 new BMap.LocalCity().get(function(result){ map.setCenter(result.name)});}; ".
+                 new BMap.LocalCity().get(function(result){ map.setCenter(result.name)});
+                 geolocation = new BMap.Geolocation(); }; ".
 
 infoWindowContent() ->
   wf:to_list(wf:render(#blockquote{body= memes:rand(),
@@ -103,27 +106,20 @@ event(btn) ->
   wf:wire(#api{name=wf:state(apiName)}),
   wf:wire("var hndlLctnErr = new Function('a','b','c','map.openInfoWindow(b,c);b.setContent(a ? \"I`m lost. I`m lost, Dave. Dave, my mind is going. I can feel it. I can feel it. My mind is going. :(\" : \"UCCU browser doesn`t support geolocation, ugly.\");');
 infoWindow = new BMap.InfoWindow('');
-if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(function(position) {
-      var pos = {
-        lat: position.coords.latitude,
-        lng: position.coords.longitude
-      };
-
-      console.log(pos);
-
-      map.openInfoWindow(infoWindow,pos);
+  geolocation.getCurrentPosition(function(georesault) {
+    if(this.getStatus() == BMAP_STATUS_SUCCESS) {
+      console.log(georesault.point);
+      map.openInfoWindow(infoWindow,georesault.point);
       infoWindow.setContent('"++infoWindowContent()++"');
-      map.setCenter(pos);
+      map.setCenter(georesault.point);
       map.setZoom(16);
-      "++wf:state(apiName)++"(pos);
-    }, function() {
+      "++wf:state(apiName)++"(georesault.point);
+    }
+    else {
       hndlLctnErr(true, infoWindow, map.getCenter());
-    });
-  } else {
-    // Browser doesn't support Geolocation
-    hndlLctnErr(false, infoWindow, map.getCenter());
-  }");
+    }
+
+  }); ");
 event({client, {<<"timezone">>,TZ}}) -> wf:state(<<"timezone">>, TZ);
 event({client, {<<"zoomend">>,Center,Bounds,_Zoom}}) -> event({client, {<<"idle">>,Center,Bounds,_Zoom}});
 event({client, {<<"moveend">>,Center,Bounds,_Zoom}}) -> event({client, {<<"idle">>,Center,Bounds,_Zoom}});
