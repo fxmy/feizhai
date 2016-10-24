@@ -74,7 +74,8 @@ api_event(Func,Args,_Cx) ->
        wf:state(lng, maps:get(<<"lng">>, Pos)),
        wf:insert_bottom(wf:state(infowindow),#hidden{id=wf:state(validt),disabled=true,value=wf:pickle(wf:state(validt_content))}),
        wf:insert_bottom(wf:state(infowindow),#textbox{id=wf:state(nichijou)}),
-       wf:insert_bottom(wf:state(infowindow),#button{body= <<"成就get"/utf8>>,postback=nichijou,source=[wf:state(nichijou),wf:state(validt)],class=["btn waves-effect waves-light"]});
+       wf:insert_bottom(wf:state(infowindow),#button{body= <<"成就get"/utf8>>,postback=nichijou,source=[wf:state(nichijou),wf:state(validt)],class=["btn waves-effect waves-light"]}),
+       wf:wire("infoWindow.redraw();");
      true ->
        wf:info(?MODULE, "apiName mismatch, expect ~p, got ~p~n", [ApiName,Func]),
        wf:wire("console.log('uccu apiName mismatch, ugly');")
