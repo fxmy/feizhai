@@ -3,3 +3,4 @@ deps
 Mnesia*
 .applist
 *.swp
+apps/sample/.rebar
